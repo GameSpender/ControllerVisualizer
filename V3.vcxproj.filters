@@ -28,6 +28,7 @@
     <None Include="color.frag">
       <Filter>Source Files</Filter>
     </None>
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -42,6 +43,24 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SpriteRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Transform2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GamepadInput.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GamepadVisualizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ButtonObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalogStickObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -62,6 +81,18 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\twolegs.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\button_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\button_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\stick_head.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\stick_head_pressed.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
