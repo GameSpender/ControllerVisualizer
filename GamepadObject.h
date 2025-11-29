@@ -74,9 +74,11 @@ public:
 		double tempscale = 1.0f / 100.0f;
 
 		leftStick.position = vec2(-12.0f * tempscale, 0.0f * tempscale);
-		leftStick.scale = vec2(13.0f * tempscale);
+		leftStick.scale = vec2(10.0f * tempscale);
+		leftStick.displacementFactor = vec2(0.4f);
 		rightStick.position = vec2(12.0f * tempscale, 0.0f * tempscale);
-		rightStick.scale = vec2(13.0f * tempscale);
+		rightStick.scale = vec2(10.0f * tempscale);
+		rightStick.displacementFactor = vec2(0.4f);
 
 		// ABXY buttons
 
@@ -111,6 +113,23 @@ public:
 
 		scale = vec2(500.0f);
 		markDirty();
+	}
+
+	void updateFromInput(const GamepadInput& input) {
+		// Update analog sticks
+		leftStick.setStickPosition(input.leftStick);
+		rightStick.setStickPosition(input.rightStick);
+		leftStick.setPressed(input.leftStickPressed);
+		rightStick.setPressed(input.rightStickPressed);
+		// Update buttons
+		buttonA.setPressed(input.buttonA);
+		buttonB.setPressed(input.buttonB);
+		buttonX.setPressed(input.buttonX);
+		buttonY.setPressed(input.buttonY);
+		dpadUp.setPressed(input.dpad[1] > 0);
+		dpadDown.setPressed(input.dpad[1] < 0);
+		dpadLeft.setPressed(input.dpad[0] < 0);
+		dpadRight.setPressed(input.dpad[0] > 0);
 	}
 
 	virtual Interactive* hitTest(vec2 world) override {

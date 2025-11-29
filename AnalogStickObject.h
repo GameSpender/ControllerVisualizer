@@ -4,6 +4,9 @@
 #include "GLFW/glfw3.h"
 #include "InteractionInterfaces.h"
 
+#include <stdio.h>
+#include "glm/ext.hpp"
+
 using namespace std;
 using namespace glm;
 
@@ -32,7 +35,7 @@ public:
 
 
 		// Circle check (assuming size.x is diameter)
-		vec2 center = pos + (stickPosition * displacementFactor);
+		vec2 center = pos + (stickPosition * displacementFactor * getWorldScale());
 		float radius = size.x / 2.0f;
 		return length(point - center) <= radius ? this : nullptr;
 
@@ -113,15 +116,13 @@ public:
 		mat3 P = getWorldMatrix();
 		
 		mat3 T = mat3(1.0f);
-		T[2] = vec3(stickPosition * displacementFactor * scale, 0.0f);
+		T[2] = vec3(stickPosition * displacementFactor * getWorldScale(), 0.0f);
 
 		mat3 R = mat3(
 			cos(rotation), -sin(rotation), 0,
 			sin(rotation), cos(rotation), 0,
 			0, 0, 1
 		);
-
-
 
 		return T * R * P;
 	}
