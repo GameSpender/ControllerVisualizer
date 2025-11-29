@@ -54,13 +54,16 @@
     <ClInclude Include="GamepadInput.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="GamepadVisualizer.h">
+    <ClInclude Include="GamepadObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ButtonObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AnalogStickObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InteractionInterfaces.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -93,6 +96,45 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="res\stick_head_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\a_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\a_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\b_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\b_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\body.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\dpad_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\dpad_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\stick_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\stick_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\x_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\x_pressed.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\y_idle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\y_pressed.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

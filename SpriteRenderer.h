@@ -21,17 +21,17 @@ public:
 // 1. Draw using mat3 transform
 // -------------------------------
     void Draw(GLuint texture, const glm::mat3& transform) {
-        // Convert mat3 → mat4 (OpenGL expects 4x4)
         glm::mat4 model(1.0f);
 
+        // Copy rotation+scale components
         model[0][0] = transform[0][0]; // a
-        model[0][1] = transform[1][0]; // c
-
-        model[1][0] = transform[0][1]; // b
+        model[0][1] = transform[0][1]; // c
+        model[1][0] = transform[1][0]; // b
         model[1][1] = transform[1][1]; // d
 
-        model[3][0] = transform[2][0]; // tx
-        model[3][1] = transform[2][1]; // ty
+        // Translation
+        model[3][0] = transform[2].x;
+        model[3][1] = transform[2].y;
 
         glUseProgram(shader);
         glUniformMatrix4fv(glGetUniformLocation(shader, "uModel"), 1, GL_FALSE, glm::value_ptr(model));
@@ -43,6 +43,7 @@ public:
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
     }
+
 
     void Draw(GLuint texture, glm::vec2 pos, glm::vec2 size, float rotation = 0.0f) {
         glm::mat4 model(1.0f);
@@ -68,15 +69,13 @@ private:
         // quad vertices: pos (x,y), tex coords (s,t)
         float vertices[] = {
             // x   y   s   t
-            // first triangle
-            0.0f, 0.0f, 0.0f, 0.0f,   // bottom-left
-            1.0f, 0.0f, 1.0f, 0.0f,   // bottom-right
-            0.0f, 1.0f, 0.0f, 1.0f,   // top-left
+            -0.5f, -0.5f, 0.0f, 0.0f,
+             0.5f,  0.5f, 1.0f, 1.0f,
+            -0.5f,  0.5f, 0.0f, 1.0f,
 
-            // second triangle
-            0.0f, 1.0f, 0.0f, 1.0f,   // top-left
-            1.0f, 0.0f, 1.0f, 0.0f,   // bottom-right
-            1.0f, 1.0f, 1.0f, 1.0f    // top-right
+            -0.5f, -0.5f, 0.0f, 0.0f,
+             0.5f, -0.5f, 1.0f, 0.0f,
+             0.5f,  0.5f, 1.0f, 1.0f
         };
 
 

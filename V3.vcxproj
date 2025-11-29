@@ -104,6 +104,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\Milos\Documents\Fakultet\Računarska Grafika\ControllerVisualizer\packages;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp20</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,7 +141,8 @@
   <ItemGroup>
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="ButtonObject.h" />
-    <ClInclude Include="GamepadVisualizer.h" />
+    <ClInclude Include="GamepadObject.h" />
+    <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="Transform2D.h" />
     <ClInclude Include="GamepadInput.h" />
@@ -148,16 +150,29 @@
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="res\a_idle.png" />
+    <Image Include="res\a_pressed.png" />
+    <Image Include="res\body.png" />
     <Image Include="res\button_idle.png" />
     <Image Include="res\button_pressed.png" />
+    <Image Include="res\b_idle.png" />
+    <Image Include="res\b_pressed.png" />
     <Image Include="res\cursor.png" />
     <Image Include="res\cursorpress.png" />
+    <Image Include="res\dpad_idle.png" />
+    <Image Include="res\dpad_pressed.png" />
     <Image Include="res\fourlegs.png" />
     <Image Include="res\grass.png" />
     <Image Include="res\hat.png" />
     <Image Include="res\stick_head.png" />
     <Image Include="res\stick_head_pressed.png" />
+    <Image Include="res\stick_idle.png" />
+    <Image Include="res\stick_pressed.png" />
     <Image Include="res\twolegs.png" />
+    <Image Include="res\x_idle.png" />
+    <Image Include="res\x_pressed.png" />
+    <Image Include="res\y_idle.png" />
+    <Image Include="res\y_pressed.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

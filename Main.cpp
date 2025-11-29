@@ -11,6 +11,8 @@
 #include "GamepadInput.h"
 #include "ButtonObject.h"
 #include "AnalogStickObject.h"
+#include "GamepadObject.h"
+
 
 #include "glm/ext.hpp"
 
@@ -61,6 +63,9 @@ void onButtonEvent(int action) {
     }
 }
 
+void onStickEvent(vec2 position) {
+    std::cout << "Stick moved to position: (" << position.x << ", " << position.y << ")" << std::endl;
+}
 
 
 int main()
@@ -117,19 +122,45 @@ int main()
         preprocessTexture("res/stick_head_pressed.png")
 	);
 
+    GamepadTextures gamepadTex = {
+    .gamepadBody = preprocessTexture("res/body.png"),
+    .stickHead = preprocessTexture("res/stick_idle.png"),
+    .stickHeadPressed = preprocessTexture("res/stick_pressed.png"),
+    .buttonAIdle = preprocessTexture("res/a_idle.png"),
+    .buttonAPressed = preprocessTexture("res/a_pressed.png"),
+    .buttonBIdle = preprocessTexture("res/b_idle.png"),
+    .buttonBPressed = preprocessTexture("res/b_pressed.png"),
+    .buttonXIdle = preprocessTexture("res/x_idle.png"),
+    .buttonXPressed = preprocessTexture("res/x_pressed.png"),
+    .buttonYIdle = preprocessTexture("res/y_idle.png"),
+    .buttonYPressed = preprocessTexture("res/y_pressed.png"),
+    .dpadIdle = preprocessTexture("res/dpad_idle.png"),
+    .dpadPressed = preprocessTexture("res/dpad_pressed.png"),
+    };
 
+	GamepadObject gamepad(gamepadTex);
+	gamepad.position = vec2(1000.0f, 400.0f);
+	gamepad.scale = vec2(800.0f);
+	gamepad.markDirty();
+
+	gamepad.rightStick.onStickEvent = onStickEvent;
 
 
 	analogStick.position = vec2(500.0f, 300.0f);
 	analogStick.scale = vec2(100.0f, 100.0f);
     analogStick.markDirty();
 
-	button.onGlfwEvent = onButtonEvent;
+	button.onButtonEvent = onButtonEvent;
 	button.position = vec2(400.0f, 300.0f);
-	button.scale = vec2(50.0f, 50.0f);
+	button.scale = vec2(50.0f);
     analogStick.markDirty();
 
+    
+
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
+    
+
+	double rotationAngle = 0.0;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -155,22 +186,53 @@ int main()
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS) {
                 double mouseX, mouseY;
                 glfwGetCursorPos(window, &mouseX, &mouseY);
-                if (button.containsPoint(vec2((float)mouseX, (float)mouseY))) {
-                    button.setPressed(true);
+                if (button.hitTest(vec2((float)mouseX, (float)mouseY))) {
+					button.onMouseInput(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
                 }
+
+				Interactive* hitGamepad = gamepad.hitTest(vec2((float)mouseX, (float)mouseY));
+                if (hitGamepad) {
+					hitGamepad->onMouseInput(GLFW_MOUSE_BUTTON_LEFT, GLFW_PRESS);
+                }
+
             }
             if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_RELEASE) {
-                button.setPressed(false);
+				button.onMouseInput(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
+				gamepad.onMouseInput(GLFW_MOUSE_BUTTON_LEFT, GLFW_RELEASE);
             }
-        
+
+            if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+                double mouseX, mouseY;
+                glfwGetCursorPos(window, &mouseX, &mouseY);
+                if (analogStick.hitTest(vec2((float)mouseX, (float)mouseY))) {
+                    analogStick.onMouseInput(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+                }
+				Interactive* hitGamepad = gamepad.hitTest(vec2((float)mouseX, (float)mouseY));
+                if (hitGamepad) {
+                    hitGamepad->onMouseInput(GLFW_MOUSE_BUTTON_RIGHT, GLFW_PRESS);
+                }
+                analogStick.onMouseMove(vec2((float)mouseX, (float)mouseY));
+				gamepad.onMouseMove(vec2((float)mouseX, (float)mouseY));
+				
+			}
+            else if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_RELEASE) {
+				analogStick.onMouseInput(GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE);
+				gamepad.onMouseInput(GLFW_MOUSE_BUTTON_RIGHT, GLFW_RELEASE);
+            }
         }
 
 
-		analogStick.Update(0.016);
+        analogStick.update(0.016);
+        gamepad.update(0.016);
 
-		analogStick.position = vec2(500.0f, 300.0f);
-        analogStick.markDirty();
 
+
+
+        /*position = position + 1;
+        if (position > 1200)
+			position = 1000;
+		gamepad.position.x = (float)position;
+		gamepad.markDirty();*/
 
         glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
 
@@ -178,6 +240,7 @@ int main()
 
         analogStick.Draw(spriteRenderer);
 		button.Draw(spriteRenderer);
+		gamepad.Draw(spriteRenderer);
         glfwSwapBuffers(window); // Zamena bafera - prednji i zadnji bafer se menjaju kao štafeta; dok jedan procesuje, drugi se prikazuje.
         glfwPollEvents(); // Sinhronizacija pristiglih događaja
     }
