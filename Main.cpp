@@ -8,10 +8,14 @@
 #include "Util.h"
 #include "SpriteRenderer.h"
 #include <glm/gtc/type_ptr.hpp>
+
 #include "GamepadInput.h"
-#include "ButtonObject.h"
-#include "AnalogStickObject.h"
 #include "GamepadObject.h"
+
+#include "ship.h"
+#include "LineVisualizer.h"
+
+#include "Enemy.h"
 
 
 #include "glm/ext.hpp"
@@ -24,11 +28,13 @@ int endProgram(std::string message) {
     return -1;
 }
 
+const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
 
 
 GamepadObject* gamepad = nullptr;
+Ship* ship = nullptr;
 
 
 void preprocessTexture(unsigned& texture, const char* filepath) {
@@ -52,6 +58,16 @@ unsigned preprocessTexture(const char* filepath) {
     preprocessTexture(texture, filepath);
     return texture;
 }
+
+
+std::vector<Enemy> enemies;
+std::vector<Projectile> enemyProjectiles;
+unsigned enemyTex;
+unsigned int enemyProjTex;
+
+double nextSpawn = 10.0f;
+double difficulty = 1.0f;
+double spawning = false;
 
 
 void onMouseClick(GLFWwindow* window, int button, int action, int mods) {
@@ -100,6 +116,57 @@ void onButtonEvent(int action) {
 void onStickEvent(vec2 position) {
 }
 
+void onLeftThumbstick(vec2 position) {
+    if (ship) {
+        ship->setThrust(position);
+    }
+}
+
+void onRightThumbstick(vec2 position) {
+    if (ship) {
+        ship->setDirection(position);
+    }
+}
+
+
+bool shooting = false;
+void onShootEvent(int action) {
+    
+    if (action == GLFW_PRESS) {
+        shooting = true;
+    }
+    else if (action == GLFW_RELEASE) {
+        shooting = false;
+    }
+}
+
+void onEnableSpawning(int action) {
+    if (action == GLFW_PRESS) {
+        if (!spawning) {
+            difficulty = 1.2f;
+            spawning = true;
+            nextSpawn = glfwGetTime() + 2.0f;
+        }
+        if (spawning && ship->destroyed) {
+            difficulty = 1.2f;
+            spawning = false;
+            nextSpawn = glfwGetTime() + 2.0f;
+
+
+            ship->destroyed = false;
+            ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
+            ship->rotation = 0;
+            ship->inertiaAngular = 0;
+            ship->inertiaLinear = vec2(0);
+
+            enemies.clear();
+            enemyProjectiles.clear();
+
+            enemies.shrink_to_fit();
+            enemyProjectiles.shrink_to_fit();
+        }
+    }
+}
 
 int main()
 {
@@ -110,7 +177,7 @@ int main()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-    const GLFWvidmode* mode = glfwGetVideoMode(primaryMonitor);
+    mode = glfwGetVideoMode(primaryMonitor);
 
     glfwWindowHint(GLFW_RED_BITS, mode->redBits);
     glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
@@ -172,21 +239,47 @@ int main()
     };
 
 	gamepad = new GamepadObject(gamepadTex);
-	gamepad->position = vec2(1000.0f, 400.0f);
+	gamepad->position = vec2(mode->width * 0.5f, mode->height * 0.3);
 	gamepad->scale = vec2(800.0f);
 	gamepad->markDirty();
 
+	ship = new Ship(preprocessTexture("res/ship.png"), preprocessTexture("res/projectile.png"), preprocessTexture("res/smoke.png"),
+        mode->width, mode->height);
+	ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
+	ship->scale = vec2(50.0f);
+	ship->markDirty();
 
+    gamepad->leftStick.onStickEvent = onLeftThumbstick;
+	gamepad->rightStick.onStickEvent = onRightThumbstick;
+    gamepad->buttonA.onButtonEvent = onShootEvent;
+    gamepad->rightStick.onButtonEvent = onShootEvent;
+    gamepad->leftStick.onButtonEvent = onShootEvent;
+    gamepad->buttonY.onButtonEvent = onEnableSpawning;
+
+    //enemy stuff
+    enemyTex = preprocessTexture("res/enemy.png");
+    enemyProjTex = preprocessTexture("res/enemy_projectile.png");
     
+
+    LineVisualizer directionLine(
+        glm::vec2(0, 0),
+        glm::vec2(1, 0),
+        glm::vec3(1, 0, 0)   // red
+    );
+
 
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
 
 	glfwSetMouseButtonCallback(window, onMouseClick);
 
-	double position = 1000;
-
+    
+    double lastTime = 0.0f;
     while (!glfwWindowShouldClose(window))
     {
+        double time = glfwGetTime();
+        double dt = time - lastTime;
+        lastTime = time;
+
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
 
@@ -203,11 +296,113 @@ int main()
         }
 
 
-        gamepad->update(0.016);
+        gamepad->update(dt);
+
+        if (shooting) ship->shoot();
+        ship->update(dt);
+
+        if (spawning && time > nextSpawn) {
+            int spawnCount = difficulty * difficulty;
+
+            for (int i = 0; i < spawnCount; i++) {
+
+                // -------------------------------
+                // 1. Choose a random direction
+                // -------------------------------
+                float angle = glm::linearRand(0.0f, glm::two_pi<float>());
+                vec2 dir = vec2(glm::cos(angle), glm::sin(angle));
+
+                // -------------------------------
+                // 2. Choose random spawn distance
+                // Spawn 600–1200 units from ship
+                // -------------------------------
+                float distance = glm::linearRand(600.0f, 1200.0f);
+                vec2 spawnPos = ship->position + dir * distance;
+
+                // -------------------------------
+                // 3. Create enemy
+                // -------------------------------
+                enemies.emplace_back(Enemy(enemyTex, enemyProjTex, mode->width, mode->height));
+                Enemy& e = enemies.back();
+
+                e.scale = vec2(50.0f);
+                e.position = spawnPos;
+
+                // -------------------------------
+                // 4. Assign random velocity
+                // speed between 50–150
+                // -------------------------------
+                float speed = glm::linearRand(50.0f, 150.0f);
+
+                // 50% chance to drift roughly toward the ship
+                if (glm::linearRand(0.0f, 1.0f) < 0.5f) {
+                    vec2 toShip = glm::normalize(ship->position - spawnPos);
+                    e.velocity = toShip * speed;
+                }
+                else {
+                    // Random direction
+                    float moveAngle = glm::linearRand(0.0f, glm::two_pi<float>());
+                    e.velocity = vec2(glm::cos(moveAngle), glm::sin(moveAngle)) * speed;
+                }
+            }
+
+            difficulty += 0.1f;
+            nextSpawn = time + 5.0f; // optional adaptive spawn rate
+        }
+
+
+        for (auto it = enemies.begin(); it != enemies.end(); ) {
+            it->update(dt);
+            if (it->canShoot())
+                enemyProjectiles.push_back(it->shootAt(ship->position, ship->inertiaLinear, dt));
+            // Check if hit by any projectile
+            for (auto& proj : ship->projectiles) {
+                if (it->checkHit(proj)) {
+                    it->health -= 25.0f;
+                    proj.lifetime = -1.0f; // mark projectile for removal
+                }
+            }
+
+            // Remove dead enemies
+            if (it->health <= 0.0f) {
+                it = enemies.erase(it);
+            }
+            else {
+                ++it;
+            }
+        }
+
+        for (auto p = enemyProjectiles.begin(); p != enemyProjectiles.end(); ) {
+            p->update(dt);
+            //cout << "projectile: " << to_string(p->position) << endl;
+            if (ship->checkHit(*p)) {
+                p->lifetime = 0;
+                ship->destroyed = true;
+            }
+            if (p->lifetime < 0) {
+                p = enemyProjectiles.erase(p);
+            }
+            else {
+                ++p;
+            }
+        }
+
+		//directionLine.start = ship->getWorldPosition();
+		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
+        
 
         glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
 
 		gamepad->Draw(spriteRenderer);
+		ship->Draw(spriteRenderer);
+        for (auto& e : enemies)
+            e.Draw(spriteRenderer);
+        for (auto& p : enemyProjectiles)
+            p.Draw(spriteRenderer);
+
+
+
+		//directionLine.Draw(colorShader, mode->width, mode->height);
         glfwSwapBuffers(window); // Zamena bafera - prednji i zadnji bafer se menjaju kao štafeta; dok jedan procesuje, drugi se prikazuje.
         glfwPollEvents(); // Sinhronizacija pristiglih događaja
     }

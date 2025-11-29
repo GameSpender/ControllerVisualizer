@@ -136,13 +136,18 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ship.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="GamepadObject.h" />
+    <ClInclude Include="Enemy.h" />
     <ClInclude Include="InteractionInterfaces.h" />
+    <ClInclude Include="LineVisualizer.h" />
+    <ClInclude Include="Projectile.h" />
+    <ClInclude Include="ship.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="Transform2D.h" />
     <ClInclude Include="GamepadInput.h" />
@@ -164,6 +169,7 @@
     <Image Include="res\fourlegs.png" />
     <Image Include="res\grass.png" />
     <Image Include="res\hat.png" />
+    <Image Include="res\ship.png" />
     <Image Include="res\stick_head.png" />
     <Image Include="res\stick_head_pressed.png" />
     <Image Include="res\stick_idle.png" />
