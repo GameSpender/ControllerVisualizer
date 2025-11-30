@@ -110,6 +110,7 @@ unsigned loadImageToTexture(const char* filePath) {
         }
 
         unsigned int Texture;
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glGenTextures(1, &Texture);
         glBindTexture(GL_TEXTURE_2D, Texture);
         glTexImage2D(GL_TEXTURE_2D, 0, InternalFormat, TextureWidth, TextureHeight, 0, InternalFormat, GL_UNSIGNED_BYTE, ImageData);
