@@ -4,6 +4,7 @@
 #define _USE_MATH_DEFINES
 #include <cmath> // za pi
 #include <algorithm> // za max()
+#include <random>
 #include <iostream>
 #include "Util.h"
 #include "SpriteRenderer.h"
@@ -17,7 +18,7 @@
 
 #include "Enemy.h"
 
-
+#include "irrKlang/irrKlang.h"
 #include "glm/ext.hpp"
 
 using namespace glm;
@@ -31,6 +32,10 @@ int endProgram(std::string message) {
 const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
+
+
+irrklang::ISoundEngine* soundEngine = irrklang::createIrrKlangDevice();
+
 
 
 GamepadObject* gamepad = nullptr;
@@ -100,9 +105,57 @@ void onMouseMove(GLFWwindow* window, double xpos, double ypos) {
 	lastMousePos = mousePos;
 }
 
+std::vector<std::string> musicTracks = {
+    "audio/track1.ogg",
+    "audio/track2.ogg",
+    "audio/track3.ogg",
+    "audio/track4.ogg"
+};
 
+std::vector<std::string> musicQueue;
+irrklang::ISound* currentMusic = nullptr;
 
+void shuffleMusic() {
+    musicQueue = musicTracks;
+    std::shuffle(musicQueue.begin(), musicQueue.end(), std::mt19937(std::random_device{}()));
+}
 
+void playNextTrack(irrklang::ISoundEngine* engine) {
+    if (musicQueue.empty()) {
+        shuffleMusic(); // reshuffle when all tracks are used
+    }
+
+    std::string track = musicQueue.back();
+    musicQueue.pop_back();
+
+    if (currentMusic) {
+        currentMusic->drop();
+    }
+
+    currentMusic = engine->play2D(track.c_str(), false, false, true);
+}
+
+void updateMusic(irrklang::ISoundEngine* engine) {
+    if (!currentMusic || currentMusic->isFinished()) {
+        playNextTrack(engine);
+    }
+}
+
+void destroySound() {
+    soundEngine->play2D("assets/explosion.wav");
+}
+
+void shootSound() {
+    soundEngine->play2D("assets/whoop_shoot.wav");
+}
+
+void enemyShootSound() {
+    soundEngine->play2D("assets/enemy_shoot.wav");
+}
+
+void enemyDeathSound() {
+    soundEngine->play2D("assets/enemy_death.wav");
+}
 
 void onButtonEvent(int action) {
     if (action == GLFW_PRESS) {
@@ -153,7 +206,7 @@ void onEnableSpawning(int action) {
             nextSpawn = glfwGetTime() + 2.0f;
 
 
-            ship->destroyed = false;
+            ship->setRepaired();
             ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
             ship->rotation = 0;
             ship->inertiaAngular = 0;
@@ -222,6 +275,7 @@ int main()
         preprocessTexture("res/stick_head_pressed.png")
 	);
 
+
     GamepadTextures gamepadTex = {
     .gamepadBody = preprocessTexture("res/body.png"),
     .stickHead = preprocessTexture("res/stick_idle.png"),
@@ -247,6 +301,8 @@ int main()
         mode->width, mode->height);
 	ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
 	ship->scale = vec2(50.0f);
+    ship->destroyedCallback = destroySound;
+    ship->shootCallback = shootSound;
 	ship->markDirty();
 
     gamepad->leftStick.onStickEvent = onLeftThumbstick;
@@ -266,6 +322,8 @@ int main()
         glm::vec2(1, 0),
         glm::vec3(1, 0, 0)   // red
     );
+
+    shuffleMusic();
 
 
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
@@ -353,8 +411,11 @@ int main()
 
         for (auto it = enemies.begin(); it != enemies.end(); ) {
             it->update(dt);
-            if (it->canShoot())
+            if (it->canShoot()) {
                 enemyProjectiles.push_back(it->shootAt(ship->position, ship->inertiaLinear, dt));
+                enemyShootSound();
+            }
+                
             // Check if hit by any projectile
             for (auto& proj : ship->projectiles) {
                 if (it->checkHit(proj)) {
@@ -365,6 +426,7 @@ int main()
 
             // Remove dead enemies
             if (it->health <= 0.0f) {
+                enemyDeathSound();
                 it = enemies.erase(it);
             }
             else {
@@ -377,7 +439,7 @@ int main()
             //cout << "projectile: " << to_string(p->position) << endl;
             if (ship->checkHit(*p)) {
                 p->lifetime = 0;
-                ship->destroyed = true;
+                ship->setDestroyed();
             }
             if (p->lifetime < 0) {
                 p = enemyProjectiles.erase(p);
@@ -400,7 +462,8 @@ int main()
         for (auto& p : enemyProjectiles)
             p.Draw(spriteRenderer);
 
-
+        if(spawning)
+            updateMusic(soundEngine);
 
 		//directionLine.Draw(colorShader, mode->width, mode->height);
         glfwSwapBuffers(window); // Zamena bafera - prednji i zadnji bafer se menjaju kao štafeta; dok jedan procesuje, drugi se prikazuje.

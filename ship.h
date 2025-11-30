@@ -5,6 +5,7 @@
 #include "Transform2D.h"
 #include "InteractionInterfaces.h"
 #include "Projectile.h"
+#include "irrKlang/irrKlang.h"
 
 
 using namespace glm;
@@ -26,6 +27,10 @@ class Ship : public Transform2D, public Animated
     double shotInterval = 0.1f;
 public:
     vector<Projectile> projectiles;
+    
+    function<void()> shootCallback;
+    function<void()> destroyedCallback;
+    function<void(float)> thrustCallback;
 
     // inertia = (vx, vy, angularVelocity)
     vec2 inertiaLinear = vec2(0.0f);
@@ -137,12 +142,29 @@ public:
             projectiles.emplace_back(projectileTexture, spawnPos, projVelocity, 3.0f, 25.0f, rotation);
             projectiles.back().setParent(parent);
             nextShot = currentTime + shotInterval;
+
+            shootCallback();
         }
     }
 
     bool checkHit(const Projectile& proj) {
         float dist = length(proj.position - position);
         return dist < length(scale) * 0.3f; // example radius
+    }
+    
+    void setDestroyed()
+    {
+        if (!destroyed) {
+            destroyed = true;
+            destroyedCallback();
+        }
+        
+    }
+
+    void setRepaired()
+    {
+        if(destroyed)
+            destroyed = false;
     }
 
 private:
@@ -178,6 +200,8 @@ private:
         }
 
         vec2 finalThrust = thrustWorld * totalMultiplier;
+        if(thrustCallback)
+            thrustCallback(length(finalThrust));
         // Apply final thrust
         inertiaLinear += finalThrust * delta;
         return finalThrust;
