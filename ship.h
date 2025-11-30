@@ -40,8 +40,8 @@ public:
     float bonusBrakingMultiplier = 2.0f;
     float rotationThrust = 100.0f;
 
-    float PD_p = 40.0f;
-    float PD_d = 5.0f;
+    float PD_p = 45.0f;
+    float PD_d = 9.0f;
 
     float shotSpeed = 3000.0f;
 
@@ -92,7 +92,7 @@ public:
         // Rotation integration
         inertiaAngular -= inertiaAngular * rotationFriction * delta;
 
-        borderCollision(screenMin, screenMax, 0.5f, -0.1f);
+        borderCollision(screenMin, screenMax, 0.5f, -0.06f);
 
         updateParticles(dt);
         updateProjectiles(dt);
@@ -248,7 +248,7 @@ private:
     }
 
     // Call this inside update() after moving the ship
-    void borderCollision(const glm::vec2& screenMin, const glm::vec2& screenMax, float restitution = 0.5f, float spinFactor = 1.0f)
+    void borderCollision(const glm::vec2& screenMin, const glm::vec2& screenMax, float restitution = 0.5f, float spinFactor = 0.3f)
     {
         // Check X axis
         if (position.x < screenMin.x)

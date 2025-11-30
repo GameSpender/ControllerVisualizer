@@ -27,6 +27,8 @@ struct GamepadTextures{
 	unsigned int buttonYPressed;
 	unsigned int dpadIdle;
 	unsigned int dpadPressed;
+	unsigned int bumper;
+	unsigned int bumperPressed;
 };;
 
 class GamepadObject : public Transform2D, public Interactive, public Animated{
@@ -46,6 +48,9 @@ public:
 	ButtonObject dpadLeft;
 	ButtonObject dpadRight;
 
+	ButtonObject bumperLeft;
+	ButtonObject bumperRight;
+
 public:
 
 	GamepadObject(GamepadTextures tex):
@@ -58,7 +63,9 @@ public:
 		dpadUp(tex.dpadIdle, tex.dpadPressed, RECTANGLE),
 		dpadDown(tex.dpadIdle, tex.dpadPressed, RECTANGLE),
 		dpadLeft(tex.dpadIdle, tex.dpadPressed, RECTANGLE),
-		dpadRight(tex.dpadIdle, tex.dpadPressed, RECTANGLE)
+		dpadRight(tex.dpadIdle, tex.dpadPressed, RECTANGLE),
+		bumperLeft(tex.bumper, tex.bumperPressed, RECTANGLE),
+		bumperRight(tex.bumper, tex.bumperPressed, RECTANGLE)
 	{// Setup hierarchy
 		addChild(&leftStick);
 		addChild(&rightStick);
@@ -70,6 +77,8 @@ public:
 		addChild(&dpadDown);
 		addChild(&dpadLeft);
 		addChild(&dpadRight);
+		addChild(&bumperLeft);
+		addChild(&bumperRight);
 		// Position components appropriately (example positions, adjust as needed)
 		double tempscale = 1.0f / 100.0f;
 
@@ -111,6 +120,13 @@ public:
 		dpadRight.rotation = radians(270.0f);
 		dpadRight.scale = vec2(7.0f * tempscale);
 
+		// Bumpers
+		
+		bumperLeft.position = vec2(-22.0f * tempscale, -30.0f * tempscale);
+		bumperLeft.scale = vec2(15.0f) * tempscale;
+		bumperRight.position = vec2(22.0f * tempscale, -30.0f * tempscale);
+		bumperRight.scale = vec2(15.0f) * tempscale;
+
 		scale = vec2(500.0f);
 		markDirty();
 	}
@@ -130,6 +146,9 @@ public:
 		dpadDown.setPressed(input.dpad[1] < 0);
 		dpadLeft.setPressed(input.dpad[0] < 0);
 		dpadRight.setPressed(input.dpad[0] > 0);
+
+		bumperLeft.setPressed(input.leftBumper);
+		bumperRight.setPressed(input.rightBumper);
 	}
 
 	virtual Interactive* hitTest(vec2 world) override {
@@ -180,6 +199,8 @@ public:
 		dpadDown.Draw(renderer);
 		dpadLeft.Draw(renderer);
 		dpadRight.Draw(renderer);
+		bumperLeft.Draw(renderer);
+		bumperRight.Draw(renderer);
 	}
 
 };

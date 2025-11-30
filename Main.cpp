@@ -21,6 +21,10 @@
 #include "irrKlang/irrKlang.h"
 #include "glm/ext.hpp"
 
+#include "TextRenderer.h"
+
+#include <format>
+
 using namespace glm;
 
 int endProgram(std::string message) {
@@ -73,6 +77,7 @@ unsigned int enemyProjTex;
 double nextSpawn = 10.0f;
 double difficulty = 1.0f;
 double spawning = false;
+int killCount = 0;
 
 
 void onMouseClick(GLFWwindow* window, int button, int action, int mods) {
@@ -146,7 +151,7 @@ void destroySound() {
 }
 
 void shootSound() {
-    soundEngine->play2D("assets/whoop_shoot.wav");
+    soundEngine->play2D("assets/shoot.wav");
 }
 
 void enemyShootSound() {
@@ -199,6 +204,7 @@ void onEnableSpawning(int action) {
             difficulty = 1.2f;
             spawning = true;
             nextSpawn = glfwGetTime() + 2.0f;
+            killCount = 0;
         }
         if (spawning && ship->destroyed) {
             difficulty = 1.2f;
@@ -290,6 +296,8 @@ int main()
     .buttonYPressed = preprocessTexture("res/y_pressed.png"),
     .dpadIdle = preprocessTexture("res/dpad_idle.png"),
     .dpadPressed = preprocessTexture("res/dpad_pressed.png"),
+    .bumper = preprocessTexture("res/bumper.png"),
+    .bumperPressed = preprocessTexture("res/bumper_pressed.png")
     };
 
 	gamepad = new GamepadObject(gamepadTex);
@@ -308,8 +316,7 @@ int main()
     gamepad->leftStick.onStickEvent = onLeftThumbstick;
 	gamepad->rightStick.onStickEvent = onRightThumbstick;
     gamepad->buttonA.onButtonEvent = onShootEvent;
-    gamepad->rightStick.onButtonEvent = onShootEvent;
-    gamepad->leftStick.onButtonEvent = onShootEvent;
+    gamepad->bumperRight.onButtonEvent = onShootEvent;
     gamepad->buttonY.onButtonEvent = onEnableSpawning;
 
     //enemy stuff
@@ -330,8 +337,20 @@ int main()
 
 	glfwSetMouseButtonCallback(window, onMouseClick);
 
+    TextRenderer titleText;
+    TextRenderer killcountText;
+    titleText.LoadFont("fonts/font.otf", 80, glm::vec3(0.8f, 0.5f, 0.1f)); // baked orange
+    titleText.position = vec2(mode->width * 0.22f, mode->height * 0.7f);
+
+    killcountText.LoadFont("fonts/font.otf", 170, glm::vec3(0.8f, 0.5f, 0.1f)); // baked orange
+    killcountText.position = vec2(mode->width * 0.375f, mode->height * 0.85f);
+
+    
+
+
     
     double lastTime = 0.0f;
+
     while (!glfwWindowShouldClose(window))
     {
         double time = glfwGetTime();
@@ -428,6 +447,7 @@ int main()
             if (it->health <= 0.0f) {
                 enemyDeathSound();
                 it = enemies.erase(it);
+                killCount++;
             }
             else {
                 ++it;
@@ -454,6 +474,15 @@ int main()
         
 
         glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
+
+        if (spawning) {
+
+            killcountText.DrawText(spriteRenderer, format("{:04}", killCount));
+        }
+        else {
+            titleText.DrawText(spriteRenderer, "Controller Visualizer");
+        }
+            
 
 		gamepad->Draw(spriteRenderer);
 		ship->Draw(spriteRenderer);
