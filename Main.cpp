@@ -48,10 +48,12 @@ Ship* ship = nullptr;
 
 void preprocessTexture(unsigned& texture, const char* filepath) {
     texture = loadImageToTexture(filepath); // Učitavanje teksture
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
     glBindTexture(GL_TEXTURE_2D, texture); // Vezujemo se za teksturu kako bismo je podesili
 
     // Generisanje mipmapa - predefinisani različiti formati za lakše skaliranje po potrebi (npr. da postoji 32 x 32 verzija slike, ali i 16 x 16, 256 x 256...)
     //glGenerateMipmap(GL_TEXTURE_2D);
+    
 
     // Podešavanje strategija za wrap-ovanje - šta da radi kada se dimenzije teksture i poligona ne poklapaju
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // S - tekseli po x-osi

@@ -66,6 +66,8 @@ public:
 
 private:
     void initRenderData() {
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         // quad vertices: pos (x,y), tex coords (s,t)
         float vertices[] = {
             // x   y   s   t
