@@ -113,7 +113,8 @@
       <AdditionalLibraryDirectories>$(ProjectDir)dependencies;$(ProjectDir)lib\Winx64-visualStudio;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"</Command>
+      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"
+copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
