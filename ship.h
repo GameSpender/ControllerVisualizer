@@ -16,6 +16,7 @@ class Ship : public Transform2D, public Animated
     
     unsigned int texture;
     unsigned int projectileTexture;
+    unsigned int burstTexture;
     
     unsigned int smokeTexture;
     vector<Projectile> smokeParticles;
@@ -25,15 +26,22 @@ class Ship : public Transform2D, public Animated
 
     double nextShot = 0.0f;
     double shotInterval = 0.1f;
+
+    double nextBurst = 0.0f;
+    double burstInterval = 10.0f;
+
 public:
-    vector<Projectile> projectiles;
+    vector<shared_ptr<Projectile>> projectiles;
     
     function<void()> shootCallback;
+    function<void()> burstCallback;
+    function<void()> BurstOnCooldownCallback;
+    function<void()> BurstReadyCallback;
     function<void()> destroyedCallback;
     function<void(float)> thrustCallback;
 
     // inertia = (vx, vy, angularVelocity)
-    vec2 inertiaLinear = vec2(0.0f);
+    glm::vec2 inertiaLinear = glm::vec2(0.0f);
     float inertiaAngular = 0.0f;
     float baseThrust = 400.0f;
     float bonusThrustMultiplier = 1.2f;
@@ -45,24 +53,24 @@ public:
 
     float shotSpeed = 3000.0f;
 
-    vec2 thrustDir = vec2(0.0f);   // local thrust 
+    glm::vec2 thrustDir = glm::vec2(0.0f);   // local thrust 
 
     float mass = 5.0f;
     float friction = 0.1f;
     float rotationFriction = 1.0f;
 
-    vec2 screenMin = vec2(0.0f);
-    vec2 screenMax = vec2(0.0f);
+    glm::vec2 screenMin = glm::vec2(0.0f);
+    glm::vec2 screenMax = glm::vec2(0.0f);
 
 
-    vec2 targetRot = vec2(0.0f);
+    glm::vec2 targetRot = glm::vec2(0.0f);
 
     bool destroyed = false;
 
     Ship(unsigned int texture, unsigned int projectileTexture, unsigned int smokeTexture) 
         : texture(texture), projectileTexture(projectileTexture), smokeTexture(smokeTexture){}
-    Ship(unsigned int texture, unsigned int projectileTexture, unsigned int smokeTexture, int screenWidth, int screenHeight)
-        : texture(texture), projectileTexture(projectileTexture), smokeTexture(smokeTexture),
+    Ship(unsigned int texture, unsigned int projectileTexture, unsigned int smokeTexture, unsigned int burstTexture, int screenWidth, int screenHeight)
+        : texture(texture), projectileTexture(projectileTexture), smokeTexture(smokeTexture), burstTexture(burstTexture),
         screenMin(vec2(0.0f)), screenMax(vec2(screenWidth, screenHeight)) {}
 
     // -----------------------------------------
@@ -75,7 +83,7 @@ public:
         position += inertiaLinear * delta;
         rotation += inertiaAngular * delta;
 
-        vec2 thrust;
+        glm::vec2 thrust;
         // Apply forces
         if (!destroyed) {
             thrust = applyThrust(thrustDir, delta);
@@ -98,6 +106,13 @@ public:
         updateProjectiles(dt);
 
         markDirty();
+
+        double currentTime = glfwGetTime();
+        if (currentTime > nextBurst && nextBurst > 0.0f && BurstReadyCallback) {
+            nextBurst = -1;
+            BurstReadyCallback();
+        }
+            
     }
 
     void Draw(SpriteRenderer& renderer) override
@@ -105,7 +120,7 @@ public:
         renderer.Draw(texture, getWorldMatrix());
 
         for (auto p : projectiles)
-            p.Draw(renderer);
+            p->Draw(renderer);
         for (auto p : smokeParticles)
             p.Draw(renderer);
     }
@@ -139,11 +154,31 @@ public:
         if (currentTime > nextShot) {
             vec2 spawnPos = position + forward() * 20.0f; // spawn in front of ship
             vec2 projVelocity = forward() * shotSpeed + inertiaLinear;       // projectile speed
-            projectiles.emplace_back(projectileTexture, spawnPos, projVelocity, 3.0f, 25.0f, rotation);
-            projectiles.back().setParent(parent);
+            projectiles.push_back(make_shared<Projectile>(projectileTexture, spawnPos, projVelocity, 3.0f, 25.0f, rotation));
+            projectiles.back()->setParent(parent.lock());
             nextShot = currentTime + shotInterval;
 
-            shootCallback();
+            if(shootCallback)
+                shootCallback();
+        }
+    }
+
+    void burst() {
+        if (destroyed) return;
+        double currentTime = glfwGetTime();
+        if (currentTime > nextBurst) {
+            vec2 spawnPos = vec2(0.0f);
+            vec2 projVelocity = vec2(0.0f);
+            projectiles.push_back(make_shared<Explosion>(burstTexture, spawnPos, projVelocity, 0.4f, 0.5f, 4.0f, 0, 0, 3.5f));
+            projectiles.back()->setParent(shared_from_this());
+            if(burstCallback)
+                burstCallback();
+
+            nextBurst = currentTime + burstInterval;
+        }
+        else {
+            if(BurstOnCooldownCallback)
+                BurstOnCooldownCallback();
         }
     }
 
@@ -334,9 +369,9 @@ private:
 
     void updateProjectiles(double dt) {
         for (int i = projectiles.size() - 1; i >= 0; --i) {
-            projectiles[i].update(dt);
+            projectiles[i]->update(dt);
 
-            if (projectiles[i].isDead()) {
+            if (projectiles[i]->isDead()) {
                 projectiles.erase(projectiles.begin() + i); // safe, no memory leaks
             }
         }

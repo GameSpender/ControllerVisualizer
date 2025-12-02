@@ -138,7 +138,8 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
       <AdditionalDependencies>opengl32.lib;irrKlang.lib;freetype.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"</Command>
+      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"
+copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>

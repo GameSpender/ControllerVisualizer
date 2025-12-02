@@ -39,11 +39,12 @@ int screenHeight = 800;
 
 
 irrklang::ISoundEngine* soundEngine = irrklang::createIrrKlangDevice();
+irrklang::ISoundSource* burstReady = soundEngine->addSoundSourceFromFile("assets/burst_ready.wav");
 
 
+std::shared_ptr<GamepadObject> gamepad;
+std::shared_ptr<Ship> ship;
 
-GamepadObject* gamepad = nullptr;
-Ship* ship = nullptr;
 
 
 void preprocessTexture(unsigned& texture, const char* filepath) {
@@ -141,6 +142,7 @@ void playNextTrack(irrklang::ISoundEngine* engine) {
     }
 
     currentMusic = engine->play2D(track.c_str(), false, false, true);
+    currentMusic->setVolume(0.7f);
 }
 
 void updateMusic(irrklang::ISoundEngine* engine) {
@@ -155,6 +157,18 @@ void destroySound() {
 
 void shootSound() {
     soundEngine->play2D("assets/shoot.wav");
+}
+
+void burstSound() {
+    soundEngine->play2D("assets/burst.wav");
+}
+
+void burstCooldownSound() {
+    soundEngine->play2D("assets/burst_cooldown.wav");
+}
+
+void burstReadySound() {
+    soundEngine->play2D(burstReady);
 }
 
 void enemyShootSound() {
@@ -198,6 +212,12 @@ void onShootEvent(int action) {
     }
     else if (action == GLFW_RELEASE) {
         shooting = false;
+    }
+}
+
+void onBurstEvent(int action) {
+    if (action == GLFW_PRESS) {
+        ship->burst();
     }
 }
 
@@ -303,24 +323,30 @@ int main()
     .bumperPressed = preprocessTexture("res/bumper_pressed.png")
     };
 
-	gamepad = new GamepadObject(gamepadTex);
+	gamepad = make_shared<GamepadObject>(gamepadTex);
+    gamepad->initHiearchy();
 	gamepad->position = vec2(mode->width * 0.5f, mode->height * 0.3);
 	gamepad->scale = vec2(800.0f);
 	gamepad->markDirty();
 
-	ship = new Ship(preprocessTexture("res/ship.png"), preprocessTexture("res/projectile.png"), preprocessTexture("res/smoke.png"),
+	ship = make_shared<Ship>(preprocessTexture("res/ship.png"), preprocessTexture("res/projectile.png"), preprocessTexture("res/smoke.png"),
+        preprocessTexture("res/burst.png"),
         mode->width, mode->height);
 	ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
 	ship->scale = vec2(50.0f);
     ship->destroyedCallback = destroySound;
     ship->shootCallback = shootSound;
+    ship->burstCallback = burstSound;
+    ship->BurstOnCooldownCallback = burstCooldownSound;
+    ship->BurstReadyCallback = burstReadySound;
 	ship->markDirty();
 
-    gamepad->leftStick.onStickEvent = onLeftThumbstick;
-	gamepad->rightStick.onStickEvent = onRightThumbstick;
-    gamepad->buttonA.onButtonEvent = onShootEvent;
-    gamepad->bumperRight.onButtonEvent = onShootEvent;
-    gamepad->buttonY.onButtonEvent = onEnableSpawning;
+    gamepad->leftStick->onStickEvent = onLeftThumbstick;
+	gamepad->rightStick->onStickEvent = onRightThumbstick;
+    gamepad->buttonA->onButtonEvent = onShootEvent;
+    gamepad->bumperRight->onButtonEvent = onShootEvent;
+    gamepad->bumperLeft->onButtonEvent = onBurstEvent;
+    gamepad->buttonY->onButtonEvent = onEnableSpawning;
 
     //enemy stuff
     enemyTex = preprocessTexture("res/enemy.png");
@@ -333,7 +359,12 @@ int main()
         glm::vec3(1, 0, 0)   // red
     );
 
+
+    soundEngine->setSoundVolume(0.5f);
+    burstReady->setDefaultVolume(1.0f);
+
     shuffleMusic();
+
 
 
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
@@ -440,9 +471,11 @@ int main()
                 
             // Check if hit by any projectile
             for (auto& proj : ship->projectiles) {
-                if (it->checkHit(proj)) {
+                if (it->checkHit(*proj)) {
                     it->health -= 25.0f;
-                    proj.lifetime = -1.0f; // mark projectile for removal
+                    if (auto ptr = dynamic_pointer_cast<Explosion>(proj)) {}
+                    else 
+                        proj->lifetime = -1.0f; // mark projectile for removal
                 }
             }
 
@@ -460,11 +493,21 @@ int main()
         for (auto p = enemyProjectiles.begin(); p != enemyProjectiles.end(); ) {
             p->update(dt);
             //cout << "projectile: " << to_string(p->position) << endl;
-            if (ship->checkHit(*p)) {
+            bool projectile_intercepted = false;
+            for (auto& proj : ship->projectiles) {
+
+                //destroy projectile if hit by burst
+                if (auto burst = dynamic_pointer_cast<Explosion>(proj)) {
+                    projectile_intercepted = length(p->getWorldPosition() - burst->getWorldPosition()) < burst->getWorldScale().x / 2;
+                    if (projectile_intercepted) 
+                        cout << length(p->position - burst->position) << endl;
+                }
+            } 
+            if (!projectile_intercepted && ship->checkHit(*p)) {
                 p->lifetime = 0;
                 ship->setDestroyed();
             }
-            if (p->lifetime < 0) {
+            if (p->lifetime < 0 || projectile_intercepted) {
                 p = enemyProjectiles.erase(p);
             }
             else {

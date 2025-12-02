@@ -28,7 +28,7 @@ public:
         this->rotation = rotation;
     }
 
-    void update(double dt) override {
+    virtual void update(double dt) override {
         float delta = (float)dt;
         position += velocity * delta;
         velocity -= velocity * friction * delta;
@@ -41,4 +41,32 @@ public:
     }
 
     bool isDead() const { return lifetime <= 0.0f; }
+};
+
+
+class Explosion : public Projectile {
+public:
+    float explodeSize = 5.0f;
+    float rotationSpeed = 0.0f;
+    float initial_lifetime;
+    float initial_size;
+
+    Explosion(unsigned int tex, vec2 startPos, vec2 vel, float lifetime, float size, float explodeSize, float rotation = 0.0f, float friction = 0.0f, float rotSpeed = 0.0f)
+        : Projectile(tex, startPos, vel, lifetime, size, rotation, friction), rotationSpeed(rotSpeed), 
+        initial_lifetime(lifetime), initial_size(size), explodeSize(explodeSize){
+    }
+
+    void update(double dt) override {
+        position += velocity * dt;
+        velocity -= velocity * friction * dt;
+        lifetime -= dt;
+
+        float t = 1.0f - (lifetime / initial_lifetime);
+        float eased = 1.0f - (1.0f - t) * (1.0f - t); // quad ease-out
+    
+        scale = vec2(mix(initial_size, explodeSize, eased));
+        rotation += rotationSpeed * dt;
+
+        markDirty();
+    }
 };

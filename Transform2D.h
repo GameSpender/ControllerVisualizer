@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <algorithm>
+#include <memory>
 #include <glm/glm.hpp>
 
 #define GLM_ENABLE_EXPERIMENTAL
@@ -10,7 +11,7 @@
 
 using namespace glm;
 
-class Transform2D {
+class Transform2D : public std::enable_shared_from_this<Transform2D> {
 public:
     // Local transform data
     vec2 position = vec2(0.0f);
@@ -18,8 +19,8 @@ public:
     vec2 scale = vec2(1.0f);
 
     // Hierarchy
-    Transform2D* parent = nullptr;
-    std::vector<Transform2D*> children;
+    std::weak_ptr<Transform2D> parent;
+    std::vector<std::shared_ptr<Transform2D>> children;
 
 private:
     bool dirty = true;
@@ -31,35 +32,37 @@ public:
 
     // ---------------- Hierarchy ----------------
 
-    void setParent(Transform2D* newParent) {
-        if (parent == newParent) return;
+    void setParent(std::shared_ptr<Transform2D> newParent) {
+        auto currentParent = parent.lock();
+        if (currentParent == newParent) return;
 
         // remove from old parent
-        if (parent) {
-            auto& siblings = parent->children;
-            siblings.erase(std::remove(siblings.begin(), siblings.end(), this), siblings.end());
+        if (currentParent) {
+            auto& siblings = currentParent->children;
+            siblings.erase(std::remove(siblings.begin(), siblings.end(), shared_from_this()), siblings.end());
         }
 
         parent = newParent;
 
-        if (parent)
-            parent->children.push_back(this);
+        if (newParent)
+            newParent->children.push_back(shared_from_this());
 
         markDirty();
     }
 
-    void addChild(Transform2D* child) {
+    void addChild(std::shared_ptr<Transform2D> child) {
         if (std::find(children.begin(), children.end(), child) != children.end())
             return;
         children.push_back(child);
-        child->setParent(this);
+        child->setParent(shared_from_this());
     }
+
 
     // ---------------- Dirty Propagation ----------------
 
     void markDirty() {
         dirty = true;
-        for (auto* c : children)
+        for (auto& c : children)
             c->markDirty();
     }
 
@@ -96,9 +99,13 @@ public:
     const mat3& getWorldMatrix() {
         if (dirty) {
             cachedLocalMatrix = calcLocalMatrix();
-            cachedWorldMatrix = parent
-                ? parent->getWorldMatrix() * cachedLocalMatrix
-                : cachedLocalMatrix;
+
+            if (auto p = parent.lock()) {
+                cachedWorldMatrix = p->getWorldMatrix() * cachedLocalMatrix;
+            }
+            else {
+                cachedWorldMatrix = cachedLocalMatrix;
+            }
 
             dirty = false;
         }
@@ -106,10 +113,13 @@ public:
     }
 
     const mat3& getParentWorldMatrix() {
-        if (parent)
-            return parent->getWorldMatrix();
-        else
-            return mat3(1.0f);
+        if (auto p = parent.lock()) { 
+            return p->getWorldMatrix();
+        }
+        else {
+            static mat3 identity(1.0f);
+            return identity;
+        }
 	}
 
     // ---------------- World-space helpers ----------------
