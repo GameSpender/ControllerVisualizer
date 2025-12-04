@@ -381,8 +381,9 @@ int main()
 
     
 
-
-    
+    int framerateCap = 75;
+    double frameInterval = 1.0f / framerateCap;
+    double nextFrameTime = 0.0f;
     double lastTime = 0.0f;
 
     while (!glfwWindowShouldClose(window))
@@ -517,32 +518,42 @@ int main()
 
 		//directionLine.start = ship->getWorldPosition();
 		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
-        
 
-        glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
 
-        if (spawning) {
+        double currentTime = glfwGetTime();
+        if (nextFrameTime < currentTime) {
+            float renderTime = currentTime;
 
-            killcountText.DrawText(spriteRenderer, format("{:04}", killCount));
-        }
-        else {
-            titleText.DrawText(spriteRenderer, "Controller Visualizer");
-        }
+            glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
             
+            if (spawning) {
 
-		gamepad->Draw(spriteRenderer);
-		ship->Draw(spriteRenderer);
-        for (auto& e : enemies)
-            e.Draw(spriteRenderer);
-        for (auto& p : enemyProjectiles)
-            p.Draw(spriteRenderer);
+                killcountText.DrawText(spriteRenderer, format("{:04}", killCount));
+            }
+            else {
+                titleText.DrawText(spriteRenderer, "Controller Visualizer");
+            }
 
-        if(spawning)
-            updateMusic(soundEngine);
 
-		//directionLine.Draw(colorShader, mode->width, mode->height);
-        glfwSwapBuffers(window); // Zamena bafera - prednji i zadnji bafer se menjaju kao štafeta; dok jedan procesuje, drugi se prikazuje.
-        glfwPollEvents(); // Sinhronizacija pristiglih događaja
+            gamepad->Draw(spriteRenderer);
+            ship->Draw(spriteRenderer);
+            for (auto& e : enemies)
+                e.Draw(spriteRenderer);
+            for (auto& p : enemyProjectiles)
+                p.Draw(spriteRenderer);
+
+            if (spawning)
+                updateMusic(soundEngine);
+
+            //directionLine.Draw(colorShader, mode->width, mode->height);
+            glfwSwapBuffers(window);
+
+            currentTime = glfwGetTime();
+            renderTime = currentTime - renderTime;
+            nextFrameTime = currentTime + frameInterval - renderTime ;
+        }
+
+        glfwPollEvents(); 
     }
 
     glDeleteProgram(rectShader);
