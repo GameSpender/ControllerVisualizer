@@ -25,7 +25,7 @@ class Ship : public Transform2D, public Animated
     double particleInterval = 0.05f;
 
     double nextShot = 0.0f;
-    double shotInterval = 0.1f;
+    double shotInterval = 0.1f; // original 0.1f
 
     double nextBurst = 0.0f;
     double burstInterval = 10.0f;
@@ -159,6 +159,33 @@ public:
             nextShot = currentTime + shotInterval;
 
             if(shootCallback)
+                shootCallback();
+        }
+    }
+
+    void shoot_shotgun() {
+        if (destroyed) return;
+        double currentTime = glfwGetTime();
+        if (currentTime > nextShot) {
+            vec2 spawnPos = position + forward() * 20.0f; // spawn in front of ship
+            int shotCount = 5;
+            float spread = 4.0f;
+            for (int i = 0; i < shotCount; i++) {
+                vec2 projVelocity = forward() * shotSpeed + inertiaLinear;       // projectile speed
+                float angle = radians(spread * i - (shotCount / 2.0f * spread)); // rotate 5 degrees
+                vec2 rotated = vec2(
+                    projVelocity.x * cos(angle) - projVelocity.y * sin(angle),
+                    projVelocity.x * sin(angle) + projVelocity.y * cos(angle)
+                );
+
+                projectiles.push_back(make_shared<Projectile>(projectileTexture, spawnPos, rotated, 3.0f, 25.0f, rotation));
+                projectiles.back()->setParent(parent.lock());
+
+            }
+
+            nextShot = currentTime + shotInterval;
+
+            if (shootCallback)
                 shootCallback();
         }
     }
