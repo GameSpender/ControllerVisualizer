@@ -143,6 +143,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include="passthrough.vert" />
     <None Include="rect.frag" />
     <None Include="rect.vert" />
     <None Include="color.frag" />
@@ -152,7 +153,9 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="ship.cpp" />
+    <None Include="pulse_effect.frag">
+      <FileType>Document</FileType>
+    </None>
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -160,9 +163,12 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="Init.h" />
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LineVisualizer.h" />
     <ClInclude Include="Projectile.h" />
+    <ClInclude Include="PostProcessRenderer.h" />
+    <ClInclude Include="PulseEffectRenderer.h" />
     <ClInclude Include="ship.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="TextRenderer.h" />

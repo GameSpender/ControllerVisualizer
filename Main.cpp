@@ -24,6 +24,8 @@
 #include "TextRenderer.h"
 
 #include <format>
+#include "Init.h"
+#include "PulseEffectRenderer.h"
 
 using namespace glm;
 
@@ -273,6 +275,12 @@ int main()
     // Inicijalizacija GLEW
     if (glewInit() != GLEW_OK) return endProgram("GLEW failed to initialize");
 
+    screenWidth = mode->width;
+    screenHeight = mode->height;
+
+    CreateSceneFramebuffer(screenWidth, screenHeight);
+
+
     // Potrebno naglasiti da program koristi alfa kanal za providnost
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -281,11 +289,18 @@ int main()
 
     unsigned int rectShader = createShader("rect.vert", "rect.frag");
     unsigned int colorShader = createShader("color.vert", "color.frag");
+	unsigned int pulseShader = createShader("passthrough.vert", "pulse_effect.frag");
 
     glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, (float)mode->height, 0.0f, -1.0f, 1.0f);
     glUseProgram(rectShader);
     glUniformMatrix4fv(glGetUniformLocation(rectShader, "uProjection"), 1, GL_FALSE, glm::value_ptr(projection));
+    glUseProgram(pulseShader);
+    glUniform2f(glGetUniformLocation(pulseShader, "uScreenSize"), screenWidth, screenHeight);
 
+
+	PulseEffectRenderer pulseRenderer(pulseShader);
+
+    PostProcessRenderer testRenderer(pulseShader);
 
 	//unsigned spriteTexture;
 	//preprocessTexture(spriteTexture, "res/cursor.png");
@@ -385,6 +400,12 @@ int main()
     double frameInterval = 1.0f / framerateCap;
     double nextFrameTime = 0.0f;
     double lastTime = 0.0f;
+
+
+	pulseRenderer.pulseStrength = 0.03f;
+	pulseRenderer.pulseWidth = 30.0f;
+    pulseRenderer.screenHeight = screenWidth;
+	pulseRenderer.screenHeight = screenHeight;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -516,6 +537,20 @@ int main()
             }
         }
 
+        pulseRenderer.pulseActive = false;
+        for (auto& proj : ship->projectiles) {
+            if (auto burst = dynamic_pointer_cast<Explosion>(proj)) {
+				pulseRenderer.pulseCenter = burst->getWorldPosition();
+                //pulseRenderer.pulseRadius = 100.0f;
+				pulseRenderer.pulseRadius = burst->getWorldScale().x * 0.5f;
+				pulseRenderer.pulseActive = true;
+            }
+        }
+
+        if (spawning)
+            updateMusic(soundEngine);
+
+
 		//directionLine.start = ship->getWorldPosition();
 		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
 
@@ -524,8 +559,11 @@ int main()
         if (nextFrameTime < currentTime) {
             float renderTime = currentTime;
 
-            glClear(GL_COLOR_BUFFER_BIT); // Bojenje pozadine, potrebno kako pomerajući objekti ne bi ostavljali otisak
-            
+            glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
+            glViewport(0, 0, screenWidth, screenHeight);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
             if (spawning) {
 
                 killcountText.DrawText(spriteRenderer, format("{:04}", killCount));
@@ -542,9 +580,14 @@ int main()
             for (auto& p : enemyProjectiles)
                 p.Draw(spriteRenderer);
 
-            if (spawning)
-                updateMusic(soundEngine);
 
+
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            pulseRenderer.Render(sceneColorTex);
+			//testRenderer.Render(sceneColorTex);
+            
             //directionLine.Draw(colorShader, mode->width, mode->height);
             glfwSwapBuffers(window);
 

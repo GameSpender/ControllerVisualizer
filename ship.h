@@ -28,7 +28,7 @@ class Ship : public Transform2D, public Animated
     double shotInterval = 0.1f; // original 0.1f
 
     double nextBurst = 0.0f;
-    double burstInterval = 10.0f;
+    double burstInterval = 4.0f;
 
 public:
     vector<shared_ptr<Projectile>> projectiles;
