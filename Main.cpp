@@ -107,14 +107,14 @@ void onMouseClick(GLFWwindow* window, int button, int action, int mods) {
 
 double mouseTimeout = 0.0f;
 double mouseTimeoutPeriod = 3.0f;
-bool gamepadIdle = false;
+bool gamepadIdle = true;
 
 void onMouseMove(GLFWwindow* window, double xpos, double ypos) {
 	static vec2 lastMousePos = vec2(0.0f);
     double time = glfwGetTime();
     vec2 mousePos = vec2((float)xpos, (float)ypos);
     if (lastMousePos == mousePos) {
-        if (gamepad && time > mouseTimeout) {
+        if (!gamepadIdle && time > mouseTimeout) {
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
         }
         return;
@@ -432,9 +432,13 @@ int main()
 			glfwSetWindowShouldClose(window, true);
 
         if (glfwJoystickPresent(GLFW_JOYSTICK_1)) {
+            gamepadIdle = false;
             if (gamepadInput.updateFromGLFW(GLFW_JOYSTICK_1)) {
 				gamepad->updateFromInput(gamepadInput);
             }
+        }
+        else {
+            gamepadIdle = true;
         }
 
         {
