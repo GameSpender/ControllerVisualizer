@@ -159,6 +159,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Actor.h" />
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="GamepadObject.h" />
@@ -176,6 +177,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="GamepadInput.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="Weapon.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\a_idle.png" />

@@ -8,6 +8,8 @@
 #include <glm/gtx/transform2.hpp>  // for glm::translate(), rotate(), scale()
 #include <glm/gtx/matrix_operation.hpp>
 
+#include "SpriteRenderer.h"
+
 
 using namespace glm;
 
