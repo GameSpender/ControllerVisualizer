@@ -105,14 +105,25 @@ void onMouseClick(GLFWwindow* window, int button, int action, int mods) {
 }
 
 
+double mouseTimeout = 0.0f;
+double mouseTimeoutPeriod = 3.0f;
+bool gamepadIdle = false;
+
 void onMouseMove(GLFWwindow* window, double xpos, double ypos) {
 	static vec2 lastMousePos = vec2(0.0f);
+    double time = glfwGetTime();
     vec2 mousePos = vec2((float)xpos, (float)ypos);
-    if(lastMousePos == mousePos)
-		return;
+    if (lastMousePos == mousePos) {
+        if (gamepad && time > mouseTimeout) {
+            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        }
+        return;
+    }
     if (gamepad) {
 		gamepad->onMouseMove(mousePos);
     }
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    mouseTimeout = time + mouseTimeoutPeriod;
 	lastMousePos = mousePos;
 }
 
@@ -290,9 +301,9 @@ int main()
 
 
 
-    unsigned int rectShader = createShader("rect.vert", "rect.frag");
-    unsigned int colorShader = createShader("color.vert", "color.frag");
-	unsigned int pulseShader = createShader("passthrough.vert", "pulse_effect.frag");
+    unsigned int rectShader = createShader("shaders/rect.vert", "shaders/rect.frag");
+    unsigned int colorShader = createShader("shaders/color.vert", "shaders/color.frag");
+	unsigned int pulseShader = createShader("shaders/passthrough.vert", "shaders/pulse_effect.frag");
 
     glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, (float)mode->height, 0.0f, -1.0f, 1.0f);
     glUseProgram(rectShader);
