@@ -144,8 +144,8 @@ GLFWcursor* loadImageToCursor(const char* filePath) {
         image.pixels = ImageData;
 
         // Tacka na površini slike kursora koja se ponaša kao hitboks
-        int hotspotX = TextureWidth / 5;
-        int hotspotY = TextureHeight / 6;
+        int hotspotX = 0;
+        int hotspotY = 0;
 
         GLFWcursor* cursor = glfwCreateCursor(&image, hotspotX, hotspotY);
         stbi_image_free(ImageData);
