@@ -272,6 +272,9 @@ int main()
     if (window == NULL) return endProgram("Failed to create window");
     glfwMakeContextCurrent(window);
 
+    GLFWcursor* cursor = loadImageToCursor("res/grass_cursor.png");
+    glfwSetCursor(window, cursor);
+
     // Inicijalizacija GLEW
     if (glewInit() != GLEW_OK) return endProgram("GLEW failed to initialize");
 
@@ -300,13 +303,14 @@ int main()
 
 	PulseEffectRenderer pulseRenderer(pulseShader);
 
-    PostProcessRenderer testRenderer(pulseShader);
-
 	//unsigned spriteTexture;
 	//preprocessTexture(spriteTexture, "res/cursor.png");
 	SpriteRenderer spriteRenderer(rectShader);
 
 	GamepadInput gamepadInput;
+
+    
+
 
     ButtonObject button(
         preprocessTexture("res/button_idle.png"),
@@ -394,7 +398,7 @@ int main()
     killcountText.LoadFont("fonts/font.otf", 170, glm::vec3(0.8f, 0.5f, 0.1f)); // baked orange
     killcountText.position = vec2(mode->width * 0.375f, mode->height * 0.85f);
 
-    
+    unsigned int signatureTexture = preprocessTexture("res/signature.png");
 
     int framerateCap = 75;
     double frameInterval = 1.0f / framerateCap;
@@ -439,32 +443,23 @@ int main()
 
             for (int i = 0; i < spawnCount; i++) {
 
-                // -------------------------------
-                // 1. Choose a random direction
-                // -------------------------------
+                // Choose a random direction
                 float angle = glm::linearRand(0.0f, glm::two_pi<float>());
                 vec2 dir = vec2(glm::cos(angle), glm::sin(angle));
 
-                // -------------------------------
-                // 2. Choose random spawn distance
-                // Spawn 600–1200 units from ship
-                // -------------------------------
+                // Choose random spawn distance
                 float distance = glm::linearRand(600.0f, 1200.0f);
                 vec2 spawnPos = ship->position + dir * distance;
 
-                // -------------------------------
-                // 3. Create enemy
-                // -------------------------------
+                // Create enemy
                 enemies.emplace_back(Enemy(enemyTex, enemyProjTex, mode->width, mode->height));
                 Enemy& e = enemies.back();
 
                 e.scale = vec2(50.0f);
                 e.position = spawnPos;
 
-                // -------------------------------
-                // 4. Assign random velocity
+                // Assign random velocity
                 // speed between 50–150
-                // -------------------------------
                 float speed = glm::linearRand(50.0f, 150.0f);
 
                 // 50% chance to drift roughly toward the ship
@@ -571,6 +566,13 @@ int main()
             else {
                 titleText.DrawText(spriteRenderer, "Controller Visualizer");
             }
+
+            {
+                auto size = vec2(100, 100);
+                auto pos = vec2(screenWidth - 60, 30);
+                spriteRenderer.Draw(signatureTexture, pos, size);
+            }
+            
 
 
             gamepad->Draw(spriteRenderer);
