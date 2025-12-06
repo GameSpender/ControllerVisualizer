@@ -6,6 +6,7 @@
 #include "InteractionInterfaces.h"
 #include "Projectile.h"
 #include "irrKlang/irrKlang.h"
+#include "EventBus.h"
 
 
 using namespace glm;
@@ -157,9 +158,6 @@ public:
             projectiles.push_back(make_shared<Projectile>(projectileTexture, spawnPos, projVelocity, 3.0f, 25.0f, rotation));
             projectiles.back()->setParent(parent.lock());
             nextShot = currentTime + shotInterval;
-
-            if(shootCallback)
-                shootCallback();
         }
     }
 

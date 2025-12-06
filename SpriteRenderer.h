@@ -56,8 +56,7 @@ public:
         model = glm::rotate(model, rotation, glm::vec3(0, 0, 1));
         model = glm::translate(model, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
 
-        // Scale and flip Y to correct texture orientation
-        model = glm::scale(model, glm::vec3(size.x, size.y, 1.0f));
+        model = glm::scale(model, glm::vec3(size.x, -size.y, 1.0f));
 
         glUseProgram(shader);
         glUniformMatrix4fv(glGetUniformLocation(shader, "uModel"), 1, GL_FALSE, glm::value_ptr(model));

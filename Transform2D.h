@@ -10,7 +10,6 @@
 
 #include "SpriteRenderer.h"
 
-
 using namespace glm;
 
 class Transform2D : public std::enable_shared_from_this<Transform2D> {
@@ -144,6 +143,6 @@ public:
     }
 
 	// ---------------- Virtual ----------------
-    virtual void Update(double dt) {}
-    virtual void Draw(SpriteRenderer&) {}
+    virtual void update(double dt) {}
+    virtual void draw(SpriteRenderer&) {}
 };
