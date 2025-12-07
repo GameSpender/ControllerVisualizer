@@ -151,9 +151,11 @@ int main()
     assetManager.loadTexture("grass", "res/grass.png");
     assetManager.loadTexture("ship", "res/ship.png");
     assetManager.loadTexture("laser_shot", "res/projectile.png");
+    assetManager.loadTexture("bullet_shot", "res/bullet.png");
 
     soundManager.loadSound("laser_shot", "assets/shoot.wav");
-    soundManager.loadSound("minigun_spool", "assets/minigun_rev.wav");
+    soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
+    soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
 
     eventHandler.init(&soundManager, &projectileSystem);
 

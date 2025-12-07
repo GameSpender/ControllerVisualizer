@@ -120,11 +120,12 @@ class LaserMinigun : public Weapon {
     bool overheated = false;
     float spoolTimeRemaining = 0.0f; // seconds left to fully spool
     bool spoolSoundPlaying = false;  // track if spool sound is active
+    bool shootSoundPlaying = false;
 
 public:
     LaserMinigun() {
-        shotInterval = 0.05f;
-        damage = 25.0f;
+        shotInterval = 0.025f;
+        damage = 8.0f;
         team = 0;
         spoolTimeRemaining = spool; // start fully unspooled
     }
@@ -134,9 +135,9 @@ public:
     float lifetime = 3.0f;
 
     // Heat / spool system
-    float spool = 2.0f;        // seconds to spool
+    float spool = 0.8f;        // seconds to spool
     float spoolDown = 1.0f;    // seconds per second to spool down
-    float heatPerShot = 2.0f;
+    float heatPerShot = 1.0f;
     float maxHeat = 100.0f;
     float dissipation = 15.0f;
 
@@ -147,7 +148,7 @@ public:
         if (!spoolSoundPlaying && events && !overheated) {
             float startTime = spool - spoolTimeRemaining; // 0 = unspooled, 1 = fully spooled
             events->emit(SoundEvent{
-                .owner = this,
+                .owner = &spoolSoundPlaying,
                 .soundName = "minigun_spool",
                 .startTime = startTime
                 });
@@ -161,11 +162,19 @@ public:
         // Stop spool sound
         if (spoolSoundPlaying && events) {
             events->emit(SoundEvent{
-                .owner = this,
+                .owner = &spoolSoundPlaying,
                 .soundName = "minigun_spool",
                 .stop = true
                 });
             spoolSoundPlaying = false;
+        }
+        if (shootSoundPlaying && events) {
+            events->emit(SoundEvent{
+                .owner = &shootSoundPlaying,
+                .soundName = "minigun_shoot",
+                .stop = true
+                });
+            shootSoundPlaying = false;
         }
     }
 
@@ -188,7 +197,7 @@ public:
             // Stop spool sound if it was playing
             if (spoolSoundPlaying && events) {
                 events->emit(SoundEvent{
-                    .owner = this,
+                    .owner = &spoolSoundPlaying,
                     .soundName = "minigun_spool",
                     .stop = true
                     });
@@ -206,6 +215,24 @@ public:
             return;
         }
 
+        // fully spooled, make funny sounds
+        if (spoolSoundPlaying && events) {
+            events->emit(SoundEvent{
+                .owner = &spoolSoundPlaying,
+                .soundName = "minigun_spool",
+                .stop = true
+                });
+            spoolSoundPlaying = false;
+        }
+        if (!shootSoundPlaying && events) {
+            events->emit(SoundEvent{
+            .owner = &shootSoundPlaying,
+            .soundName = "minigun_shoot",
+            .loop = true
+                });
+            shootSoundPlaying = true;
+        }
+
         // Gun fully spooled, check overheat
         if (currentHeat >= maxHeat) {
             overheated = true;
@@ -213,12 +240,22 @@ public:
             // Stop spool sound
             if (spoolSoundPlaying && events) {
                 events->emit(SoundEvent{
-                    .owner = this,
+                    .owner = &spoolSoundPlaying,
                     .soundName = "minigun_spool",
                     .stop = true
                     });
                 spoolSoundPlaying = false;
             }
+            if (shootSoundPlaying && events) {
+                events->emit(SoundEvent{
+                .owner = &shootSoundPlaying,
+                .soundName = "minigun_shoot",
+                .stop = true
+                    });
+                shootSoundPlaying = false;
+            }
+
+
             return;
         }
 
@@ -232,11 +269,12 @@ public:
 
             // Spawn projectile
             LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
-            projectile.scale = getWorldScale() / 1.5f;
+            projectile.scale = getWorldScale();
+            projectile.spriteName = "bullet_shot";
             projectileSystem->addProjectile<LaserProjectile>(projectile);
 
             // Emit shooting event
-            if (events) {
+            /*if (events) {
                 events->emit(ShootEvent{
                     .position = getWorldPosition(),
                     .direction = forwardWorld(),
@@ -244,7 +282,7 @@ public:
                     .soundName = "laser_shot",
                     .effectName = "laser_shot"
                     });
-            }
+            }*/
         }
     }
 };
