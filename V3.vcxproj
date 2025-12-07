@@ -162,6 +162,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="Actor.h" />
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="EventBus.h" />
     <ClInclude Include="GamepadObject.h" />
