@@ -58,6 +58,15 @@ public:
         child->setParent(shared_from_this());
     }
 
+    void removeChild(const std::shared_ptr<Transform2D>& child) {
+        auto it = std::find(children.begin(), children.end(), child);
+        if (it != children.end()) {
+            (*it)->parent.reset();
+            children.erase(it);
+        }
+    }
+
+
 
     // ---------------- Dirty Propagation ----------------
 
@@ -69,10 +78,14 @@ public:
 
     // ---------------- Matrix Builders ----------------
 
-    mat3 calcLocalMatrix() const {
+    mat3 calcLocalMatrix() {
         // 2D transform = T * R * S
         mat3 T = mat3(1.0f);
         T[2] = vec3(position, 1.0f);
+
+        rotation = std::fmod(rotation, glm::two_pi<float>());
+        if (rotation < 0.0f)
+            rotation += glm::two_pi<float>();
 
         mat3 R = mat3(
             cos(rotation), -sin(rotation), 0,
@@ -144,5 +157,4 @@ public:
 
 	// ---------------- Virtual ----------------
     virtual void update(double dt) {}
-    virtual void draw(SpriteRenderer&) {}
 };

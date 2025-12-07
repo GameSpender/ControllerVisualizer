@@ -7,43 +7,21 @@
 #include "Projectile.h"
 #include "irrKlang/irrKlang.h"
 #include "EventBus.h"
+#include "Actor.h"
+#include <string>
 
 
 using namespace glm;
 
 
-class Ship : public Transform2D, public Animated
+class Ship : public Actor2D
 {
-    
-    unsigned int texture;
-    unsigned int projectileTexture;
-    unsigned int burstTexture;
-    
-    unsigned int smokeTexture;
-    vector<Projectile> smokeParticles;
 
-    double nextParticle = 0.0f;
-    double particleInterval = 0.05f;
-
-    double nextShot = 0.0f;
-    double shotInterval = 0.1f; // original 0.1f
-
-    double nextBurst = 0.0f;
-    double burstInterval = 4.0f;
-
-public:
-    vector<shared_ptr<Projectile>> projectiles;
-    
-    function<void()> shootCallback;
-    function<void()> burstCallback;
-    function<void()> BurstOnCooldownCallback;
-    function<void()> BurstReadyCallback;
-    function<void()> destroyedCallback;
-    function<void(float)> thrustCallback;
+public:    
 
     // inertia = (vx, vy, angularVelocity)
-    glm::vec2 inertiaLinear = glm::vec2(0.0f);
-    float inertiaAngular = 0.0f;
+    glm::vec2 velocity = glm::vec2(0.0f);
+    float velocityRot = 0.0f;
     float baseThrust = 400.0f;
     float bonusThrustMultiplier = 1.2f;
     float bonusBrakingMultiplier = 2.0f;
@@ -68,12 +46,7 @@ public:
 
     bool destroyed = false;
 
-    Ship(unsigned int texture, unsigned int projectileTexture, unsigned int smokeTexture) 
-        : texture(texture), projectileTexture(projectileTexture), smokeTexture(smokeTexture){}
-    Ship(unsigned int texture, unsigned int projectileTexture, unsigned int smokeTexture, unsigned int burstTexture, int screenWidth, int screenHeight)
-        : texture(texture), projectileTexture(projectileTexture), smokeTexture(smokeTexture), burstTexture(burstTexture),
-        screenMin(vec2(0.0f)), screenMax(vec2(screenWidth, screenHeight)) {}
-
+    Ship() = default;
     // -----------------------------------------
     //              MAIN UPDATE
     // -----------------------------------------
@@ -81,49 +54,29 @@ public:
     {
         float delta = (float)dt;
 
-        position += inertiaLinear * delta;
-        rotation += inertiaAngular * delta;
+        position += velocity * delta;
+        rotation += velocityRot * delta;
 
-        glm::vec2 thrust;
-        // Apply forces
-        if (!destroyed) {
-            thrust = applyThrust(thrustDir, delta);
-            applyRotationThrust(targetRot, thrustDir, delta);
+        
 
-            produceParticles(length(thrust) / baseThrust, dt);
-        }
+        handleInput();
+
+        applyThrust(thrustDir, dt);
+        applyRotationThrust(targetRot, thrustDir, dt);
         
 
         //produceParticles(1.0f, dt);
         // Movement integration
-        inertiaLinear -= inertiaLinear * friction * delta;
+        velocity -= velocity * friction * delta;
 
         // Rotation integration
-        inertiaAngular -= inertiaAngular * rotationFriction * delta;
+        velocityRot -= velocityRot * rotationFriction * delta;
 
-        borderCollision(screenMin, screenMax, 0.5f, -0.06f);
+        if(screenMin != screenMax)
+            borderCollision(screenMin, screenMax, 0.5f, -0.06f);
 
-        updateParticles(dt);
-        updateProjectiles(dt);
 
-        markDirty();
-
-        double currentTime = glfwGetTime();
-        if (currentTime > nextBurst && nextBurst > 0.0f && BurstReadyCallback) {
-            nextBurst = -1;
-            BurstReadyCallback();
-        }
-            
-    }
-
-    void Draw(SpriteRenderer& renderer) override
-    {
-        renderer.Draw(texture, getWorldMatrix());
-
-        for (auto p : projectiles)
-            p->Draw(renderer);
-        for (auto p : smokeParticles)
-            p.Draw(renderer);
+        markDirty();            
     }
 
     void setThrust(const vec2& input)
@@ -144,68 +97,32 @@ public:
             targetRot = vec2(0.0f);
     }
 
+    vec2 getRelativeMouse() {
+        if (hasInput()) {
+            vec2 mousePos = input->getPosition(Action::MousePositionHorizontal, Action::MousePositionVertical);
+            vec2 relative = mousePos - position;
+            return relative;
+        }
+        return vec2(0);
+    }
+
+    void handleInput() {
+        if (hasInput()) {
+            setThrust(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));
+
+            vec2 aimDir = input->getPosition(Action::AimHorizontal, Action::AimVertical);
+            if (input->isDown(Action::Aim)) {
+                aimDir += getRelativeMouse();
+            }
+            setDirection(aimDir);
+        }
+    }
+
     vec2 forward() {
         float rot = -rotation - radians(90.0f);
         return vec2(cos(rot), sin(rot));
     }
 
-    void shoot() { 
-        if (destroyed) return;
-        double currentTime = glfwGetTime();
-        if (currentTime > nextShot) {
-            vec2 spawnPos = position + forward() * 20.0f; // spawn in front of ship
-            vec2 projVelocity = forward() * shotSpeed + inertiaLinear;       // projectile speed
-            projectiles.push_back(make_shared<Projectile>(projectileTexture, spawnPos, projVelocity, 3.0f, 25.0f, rotation));
-            projectiles.back()->setParent(parent.lock());
-            nextShot = currentTime + shotInterval;
-        }
-    }
-
-    void shoot_shotgun() {
-        if (destroyed) return;
-        double currentTime = glfwGetTime();
-        if (currentTime > nextShot) {
-            vec2 spawnPos = position + forward() * 20.0f; // spawn in front of ship
-            int shotCount = 5;
-            float spread = 4.0f;
-            for (int i = 0; i < shotCount; i++) {
-                vec2 projVelocity = forward() * shotSpeed + inertiaLinear;       // projectile speed
-                float angle = radians(spread * i - (shotCount / 2.0f * spread)); // rotate 5 degrees
-                vec2 rotated = vec2(
-                    projVelocity.x * cos(angle) - projVelocity.y * sin(angle),
-                    projVelocity.x * sin(angle) + projVelocity.y * cos(angle)
-                );
-
-                projectiles.push_back(make_shared<Projectile>(projectileTexture, spawnPos, rotated, 3.0f, 25.0f, rotation));
-                projectiles.back()->setParent(parent.lock());
-
-            }
-
-            nextShot = currentTime + shotInterval;
-
-            if (shootCallback)
-                shootCallback();
-        }
-    }
-
-    void burst() {
-        if (destroyed) return;
-        double currentTime = glfwGetTime();
-        if (currentTime > nextBurst) {
-            vec2 spawnPos = vec2(0.0f);
-            vec2 projVelocity = vec2(0.0f);
-            projectiles.push_back(make_shared<Explosion>(burstTexture, spawnPos, projVelocity, 0.4f, 0.5f, 4.0f, 0, 0, 3.5f));
-            projectiles.back()->setParent(shared_from_this());
-            if(burstCallback)
-                burstCallback();
-
-            nextBurst = currentTime + burstInterval;
-        }
-        else {
-            if(BurstOnCooldownCallback)
-                BurstOnCooldownCallback();
-        }
-    }
 
     bool checkHit(const Projectile& proj) {
         float dist = length(proj.position - position);
@@ -216,7 +133,6 @@ public:
     {
         if (!destroyed) {
             destroyed = true;
-            destroyedCallback();
         }
         
     }
@@ -225,6 +141,14 @@ public:
     {
         if(destroyed)
             destroyed = false;
+    }
+
+    void respawn(glm::vec2 pos, float rot = 0.0f) {
+        position = pos;
+        velocity = vec2(0);
+        rotation = rot;
+        setRepaired();
+        markDirty();
     }
 
 private:
@@ -241,7 +165,7 @@ private:
         vec2 forwardDir = forward();                  // ship's facing
         vec2 thrustWorld = direction * baseThrust;    // base thrust in world space
 
-        float speed = length(inertiaLinear);
+        float speed = length(velocity);
 
         float totalMultiplier = 1.0f;
 
@@ -253,17 +177,17 @@ private:
         // ----- Braking bonus -----
         if (speed > 0.001f)
         {
-            vec2 velDir = normalize(inertiaLinear);
+            vec2 velDir = normalize(velocity);
             float brakingAlignment = dot(thrustDir, -velDir); // 1 = against velocity
             if (brakingAlignment > 0.0f)
                 totalMultiplier += brakingAlignment * bonusBrakingMultiplier * glm::max(0.0f, forwardAlignment);
         }
 
         vec2 finalThrust = thrustWorld * totalMultiplier;
-        if(thrustCallback)
-            thrustCallback(length(finalThrust));
+
+
         // Apply final thrust
-        inertiaLinear += finalThrust * delta;
+        velocity += finalThrust * delta;
         return finalThrust;
     }
 
@@ -296,7 +220,7 @@ private:
         // 3. PD Controller
         // ----------------------
 
-        float torque = PD_p * angleDiff - PD_d * inertiaAngular; // P-D control
+        float torque = PD_p * angleDiff - PD_d * velocityRot; // P-D control
 
         // Optional clamp to prevent extreme angular acceleration
         torque = glm::clamp(torque, -rotationThrust, rotationThrust);
@@ -304,7 +228,7 @@ private:
         // ----------------------
         // 4. Apply torque
         // ----------------------
-        inertiaAngular += torque * delta;
+        velocityRot += torque * delta;
     }
 
     // Call this inside update() after moving the ship
@@ -314,19 +238,19 @@ private:
         if (position.x < screenMin.x)
         {
             position.x = screenMin.x; // clamp to border
-            if (inertiaLinear.x < 0)
+            if (velocity.x < 0)
             {
-                inertiaLinear.x = -inertiaLinear.x * restitution; // bounce
-                inertiaAngular += inertiaLinear.y * spinFactor;   // spin based on perpendicular velocity
+                velocity.x = -velocity.x * restitution; // bounce
+                velocityRot += velocity.y * spinFactor;   // spin based on perpendicular velocity
             }
         }
         else if (position.x > screenMax.x)
         {
             position.x = screenMax.x;
-            if (inertiaLinear.x > 0)
+            if (velocity.x > 0)
             {
-                inertiaLinear.x = -inertiaLinear.x * restitution;
-                inertiaAngular -= inertiaLinear.y * spinFactor;
+                velocity.x = -velocity.x * restitution;
+                velocityRot -= velocity.y * spinFactor;
             }
         }
 
@@ -334,19 +258,19 @@ private:
         if (position.y < screenMin.y)
         {
             position.y = screenMin.y;
-            if (inertiaLinear.y < 0)
+            if (velocity.y < 0)
             {
-                inertiaLinear.y = -inertiaLinear.y * restitution;
-                inertiaAngular -= inertiaLinear.x * spinFactor;
+                velocity.y = -velocity.y * restitution;
+                velocityRot -= velocity.x * spinFactor;
             }
         }
         else if (position.y > screenMax.y)
         {
             position.y = screenMax.y;
-            if (inertiaLinear.y > 0)
+            if (velocity.y > 0)
             {
-                inertiaLinear.y = -inertiaLinear.y * restitution;
-                inertiaAngular += inertiaLinear.x * spinFactor;
+                velocity.y = -velocity.y * restitution;
+                velocityRot += velocity.x * spinFactor;
             }
         }
     }
@@ -375,7 +299,7 @@ private:
             vec2 spawnPos = position + offset;
 
             // Particle velocity opposite to ship's forward + some randomness
-            vec2 particleVel = -forward() * (10.0f + thrust * 100.0f) + inertiaLinear;
+            vec2 particleVel = -forward() * (10.0f + thrust * 100.0f) + velocity;
             particleVel += vec2(
                 (float(rand()) / RAND_MAX - 0.5f) * 10.0f, // x random jitter
                 (float(rand()) / RAND_MAX - 0.5f) * 10.0f  // y random jitter
@@ -388,27 +312,7 @@ private:
             vec4 color = vec4(0.8f, 0.8f, 0.8f, 1.0f); // light gray smoke
 
             // Add to the vector
-            smokeParticles.emplace_back(smokeTexture, spawnPos, particleVel, lifetime, size, rot, 3.0f);
-        }
-    }
-
-    void updateProjectiles(double dt) {
-        for (int i = projectiles.size() - 1; i >= 0; --i) {
-            projectiles[i]->update(dt);
-
-            if (projectiles[i]->isDead()) {
-                projectiles.erase(projectiles.begin() + i); // safe, no memory leaks
-            }
-        }
-    }
-
-    void updateParticles(double dt) {
-        for (int i = smokeParticles.size() - 1; i >= 0; --i) {
-            smokeParticles[i].update(dt);
-
-            if (smokeParticles[i].isDead()) {
-                smokeParticles.erase(smokeParticles.begin() + i); // safe, no memory leaks
-            }
+            //smokeParticles.emplace_back(smokeTexture, spawnPos, particleVel, lifetime, size, rot, 3.0f);
         }
     }
 };

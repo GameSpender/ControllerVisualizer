@@ -3,8 +3,13 @@
 #include "GLFW/glfw3.h"    
 
 enum class Action {
-    MoveHorizontalAxis,
-    MoveVerticalAxis,
+    MoveHorizontal,
+    MoveVertical,
+    MousePositionHorizontal,
+    MousePositionVertical,
+    AimHorizontal,
+    AimVertical,
+    Aim,
     MoveUp,
     MoveDown,
     MoveLeft,
@@ -18,13 +23,14 @@ enum class Action {
 enum class DeviceType { Keyboard, Mouse, Gamepad };
 
 struct InputDevice {
+    DeviceType type = DeviceType::Keyboard;
+    int id = 0;
 
-    DeviceType type;
-    int id;     // gamepad index, or 0 for keyboard/mouse
     bool operator==(const InputDevice& other) const {
         return type == other.type && id == other.id;
     }
 };
+
 
 // Needed for using InputDevice in unordered containers
 namespace std {
@@ -50,6 +56,8 @@ struct InputBinding {
     int code = -1;       // key/button
     int axisCode = -1;   // for analog axes
     float scale = 1.0f;
+    float offset = 0.0f; 
+    float deadzone = 0.0f; // ignore inputs below this magnitude
 
     // digital match (buttons/keys)
     bool matchesDigital(const RawInputData& raw) const {
@@ -60,28 +68,43 @@ struct InputBinding {
             return code >= 0 && raw.mouseDown[code];
         case DeviceType::Gamepad:
             if (device.id < 0 || device.id >= 4) return false;
-            if (axisCode >= 0) return raw.gamepadAxes[device.id][axisCode] * scale > 0.5f;
+            if (axisCode >= 0) {
+                float value = raw.gamepadAxes[device.id][axisCode];
+                if (std::abs(value) < deadzone) return false; // apply deadzone
+                value = value * scale + offset;
+                return std::abs(value) > 0.5f;
+            }
             return code >= 0 && raw.gamepadButtons[device.id][code];
+        default:
+            return false;
         }
-        return false;
     }
 
     // analog value (axes, mouse delta, etc.)
     float getAnalogValue(const RawInputData& raw) const {
+        float value = 0.0f;
+
         switch (device.type) {
         case DeviceType::Keyboard:
-            return code >= 0 && raw.keyDown[code] ? scale : 0.0f;
+            value = (code >= 0 && raw.keyDown[code]) ? scale : 0.0f;
+            break;
         case DeviceType::Mouse:
-            // for analog, you could define axisCode = 0 -> X, 1 -> Y
-            if (axisCode == 0) return static_cast<float>(raw.mouseX) * scale;
-            if (axisCode == 1) return static_cast<float>(raw.mouseY) * scale;
-            return 0.0f;
+            if (axisCode == 0) value = static_cast<float>(raw.mouseX) * scale;
+            else if (axisCode == 1) value = static_cast<float>(raw.mouseY) * scale;
+            break;
         case DeviceType::Gamepad:
             if (device.id < 0 || device.id >= 4) return 0.0f;
-            if (axisCode >= 0) return raw.gamepadAxes[device.id][axisCode] * scale;
+            if (axisCode >= 0) {
+                value = raw.gamepadAxes[device.id][axisCode];
+                if (std::abs(value) < deadzone) value = 0.0f; // apply deadzone
+                value = value * scale;
+            }
+            break;
+        default:
             return 0.0f;
         }
-        return 0.0f;
+
+        return value + offset;
     }
 };
 
@@ -139,6 +162,10 @@ public:
     float getAnalog(Action action) const {
         auto it = analogState.find(action);
         return it != analogState.end() ? it->second : 0.0f;
+    }
+
+    vec2 getPosition(Action actionHorizontal, Action actionVertical) const {
+        return vec2(getAnalog(actionHorizontal), getAnalog(actionVertical));
     }
 
 private:

@@ -172,6 +172,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="LineVisualizer.h" />
     <ClInclude Include="Projectile.h" />
     <ClInclude Include="PostProcessRenderer.h" />
+    <ClInclude Include="ProjectileSystem.h" />
     <ClInclude Include="PulseEffectRenderer.h" />
     <ClInclude Include="ship.h" />
     <ClInclude Include="SpriteRenderer.h" />

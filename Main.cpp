@@ -18,9 +18,10 @@
 #include "TextRenderer.h"
 #include <format>
 #include "Init.h"
-#include "PulseEffectRenderer.h"
 #include "Actor.h"
 #include "AssetManager.h"
+
+#include "ship.h"
 
 using namespace glm;
 
@@ -38,17 +39,21 @@ class TestActor : public Actor2D {
 public: 
     float speed = 100.0f;
 
-    TestActor(std::string spriteName, PlayerInput &input, EventBus &event) : Actor2D(input, event) {
+    TestActor(std::string spriteName){
         this->spriteName = spriteName;
     }
 
     void update(double dt) override {
-        float movement = input.isDown(Action::MoveRight) ? 1.0f : 0 + input.isDown(Action::MoveLeft) ? -1.0f : 0.0f;
-        vec2 velocity(speed * movement * dt, 0);
-        position += velocity;
+        if (hasInput()) {
+            float movement = input->getAnalog(Action::MoveHorizontal);
+            vec2 velocity(speed * movement * dt, 0);
+            position += velocity;
 
-        events.emit(MoveEvent{ position, velocity, 1.0f });
-        markDirty();
+            if (hasEventBus())
+                events->emit(MoveEvent{ position, velocity, 1.0f });
+
+            markDirty();
+        }
     }
 
 };
@@ -95,7 +100,7 @@ int main()
     glUniform2f(glGetUniformLocation(pulseShader, "uScreenSize"), screenWidth, screenHeight);
 
 
-	PulseEffectRenderer pulseRenderer(pulseShader);
+	//PulseEffectRenderer pulseRenderer(pulseShader);
 
 	//unsigned spriteTexture;
 	//preprocessTexture(spriteTexture, "res/cursor.png");
@@ -127,41 +132,159 @@ int main()
     EventBus mainBus;
     AssetManager assetManager;
     InputDevice keyboard;
+    InputDevice gamepad;
+    InputDevice mouse;
     
 
     // ----------------- new stuff -------------------
 
     assetManager.loadTexture("grass", "res/grass.png");
+    assetManager.loadTexture("ship", "res/ship.png");
 
     keyboard = {
         .type = DeviceType::Keyboard,
         .id = 0
     };
+    mouse = {
+        .type = DeviceType::Mouse,
+        .id = 0
+    };
+    gamepad = {
+        .type = DeviceType::Gamepad,
+        .id = 0
+    };
 
     playerInput.devices.push_back(keyboard);
+    playerInput.devices.push_back(mouse);
+    playerInput.devices.push_back(gamepad);
 
-    InputBinding moveRightBinding;
-    InputBinding moveLeftBinding;
-    InputBinding moveRightArrowBinding;
+    {
+        // WASD for keyboard movement
+        InputBinding moveRight = {
+            .device = keyboard,
+            .code = GLFW_KEY_D,
+            .scale = 1.0f
+        };
 
-    moveRightBinding.device = keyboard;
-    moveRightBinding.code = GLFW_KEY_D;
-    moveLeftBinding.device = keyboard;
-    moveLeftBinding.code = GLFW_KEY_A;
-    moveRightArrowBinding.device = keyboard;
-    moveRightArrowBinding.code = GLFW_KEY_RIGHT;
-    playerInput.bindings[Action::MoveRight].push_back(moveRightBinding);
-    playerInput.bindings[Action::MoveRight].push_back(moveRightArrowBinding);
-    playerInput.bindings[Action::MoveLeft].push_back(moveLeftBinding);
+        InputBinding moveLeft = {
+            .device = keyboard,
+            .code = GLFW_KEY_A,
+            .scale = -1.0f
+        };
+
+        InputBinding moveUp = {
+            .device = keyboard,
+            .code = GLFW_KEY_W,
+            .scale = 1.0f
+        };
+
+        InputBinding moveDown = {
+            .device = keyboard,
+            .code = GLFW_KEY_S,
+            .scale = -1.0f
+        };
+
+        InputBinding leftStickX = {
+            .device = gamepad,
+            .axisCode = GLFW_GAMEPAD_AXIS_LEFT_X,
+            .scale = 1.0f,
+            .deadzone = 0.05f
+        };
+
+        InputBinding leftStickY = {
+            .device = gamepad,
+            .axisCode = GLFW_GAMEPAD_AXIS_LEFT_Y,
+            .scale = -1.0f,
+            .deadzone = 0.05f
+        };
+
+        // Right stick for aiming / secondary axes
+        InputBinding rightStickX = {
+            .device = gamepad,
+            .axisCode = GLFW_GAMEPAD_AXIS_RIGHT_X,
+            .scale = 1.0f,
+            .deadzone = 0.05f
+        };
+
+        InputBinding rightStickY = {
+            .device = gamepad,
+            .axisCode = GLFW_GAMEPAD_AXIS_RIGHT_Y,
+            .scale = -1.0f,
+            .deadzone = 0.05f
+        };
+
+        InputBinding mouseX = {
+            .device = mouse,
+            .axisCode = 0,
+            .scale = 1.0f
+        };
+
+        InputBinding mouseY = {
+            .device = mouse,
+            .axisCode = 1,
+            .scale = -1.0f,
+            .offset = (float)screenHeight
+        };
+
+        InputBinding mouseRight = {
+            .device = mouse,
+            .code = GLFW_MOUSE_BUTTON_2
+        };
+
+        InputBinding mouseLeft = {
+            .device = mouse,
+            .code = GLFW_MOUSE_BUTTON_1
+        };
+
+        InputBinding rightBumper = {
+            .device = gamepad,
+            .code = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER
+        };
+
+        // ---------------- Horizontal movement ----------------
+        playerInput.bindings[Action::MoveHorizontal].push_back(moveRight);
+        playerInput.bindings[Action::MoveHorizontal].push_back(moveLeft);
+        playerInput.bindings[Action::MoveHorizontal].push_back(leftStickX);
+
+        // ---------------- Vertical movement ----------------
+        playerInput.bindings[Action::MoveVertical].push_back(moveUp);
+        playerInput.bindings[Action::MoveVertical].push_back(moveDown);
+        playerInput.bindings[Action::MoveVertical].push_back(leftStickY);
+
+        // ---------------- Mouse position ----------------
+        playerInput.bindings[Action::MousePositionHorizontal].push_back(mouseX);
+        playerInput.bindings[Action::MousePositionVertical].push_back(mouseY);
+
+
+        // ---------------- Aim ----------------
+        playerInput.bindings[Action::AimHorizontal].push_back(rightStickX);
+        playerInput.bindings[Action::AimVertical].push_back(rightStickY);
+
+        playerInput.bindings[Action::Aim].push_back(mouseRight);
+
+
+        // ---------------- Shooting ----------------
+        playerInput.bindings[Action::Shoot].push_back(mouseLeft);
+        playerInput.bindings[Action::Shoot].push_back(rightBumper);
+
+    }
 
 
     inputSystem.devices.push_back(keyboard);
+    inputSystem.devices.push_back(mouse);
+    inputSystem.devices.push_back(gamepad);
     inputSystem.players.push_back(playerInput);
 
 
+    Ship playerShip;
+    playerShip.spriteName = "ship";
+    playerShip.screenMax = vec2(screenWidth, screenHeight);
+    playerShip.init(&inputSystem.players.front(), &mainBus);
+    playerShip.respawn(vec2(500, 500));
+    playerShip.scale = vec2(50);
 
-
-    TestActor testActor("grass", inputSystem.players.front(), mainBus);
+    TestActor testActor("grass");
+    testActor.init(&inputSystem.players.front(), &mainBus);
     testActor.position = vec2(100, 100);
     testActor.scale = vec2(50);
 
@@ -183,6 +306,7 @@ int main()
         inputSystem.update();
         
         testActor.update(dt);
+        playerShip.update(dt);
 
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
@@ -195,7 +319,7 @@ int main()
 
         double currentTime = glfwGetTime();
         if (nextFrameTime < currentTime) {
-            float renderTime = currentTime;
+            double renderTime = currentTime;
 
             //glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
 
@@ -214,6 +338,7 @@ int main()
             
             spriteRenderer.Draw(assetManager.getTexture(testActor.spriteName)->id, testActor.getWorldMatrix());
 
+            spriteRenderer.Draw(assetManager.getTexture(playerShip.spriteName)->id, playerShip.getWorldMatrix());
             
 
             //glBindFramebuffer(GL_FRAMEBUFFER, 0);

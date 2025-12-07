@@ -2,6 +2,10 @@
 #include <glm/glm.hpp>
 
 
+class Updateable {
+public:
+    virtual void update(double dt) {}
+};
 
 class Interactive {
 public:

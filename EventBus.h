@@ -1,16 +1,9 @@
 #pragma once
-#include "Weapon.h"
-
 #include "glm/glm.hpp"
 #include <any>
 
 using namespace glm;
 
-struct WeaponFiredEvent {
-    vec2 position;
-    vec2 direction;
-    WeaponType type;
-};
 
 struct MoveEvent {
     vec2 position;
