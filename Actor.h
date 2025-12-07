@@ -22,9 +22,19 @@ public:
         events = eventsPtr;
     }
     // Pure virtual update
-    virtual void update(double dt) = 0;
+    virtual void update(double dt) {};
 
     // Optional helper functions to check systems
     bool hasInput() const { return input != nullptr; }
     bool hasEventBus() const { return events != nullptr; }
+
+    vec2 forward() {
+        float rot = -rotation - radians(90.0f);
+        return vec2(cos(rot), sin(rot));
+    }
+
+    vec2 forwardWorld() {
+        float rot = - getWorldRotation() - radians(90.0f);
+        return vec2(cos(rot), sin(rot));
+    }
 };

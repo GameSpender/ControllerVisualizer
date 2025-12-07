@@ -165,6 +165,8 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="EventBus.h" />
+    <ClInclude Include="EventHandler.h" />
+    <ClInclude Include="Events.h" />
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="Init.h" />
@@ -176,6 +178,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="ProjectileSystem.h" />
     <ClInclude Include="PulseEffectRenderer.h" />
     <ClInclude Include="ship.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Transform2D.h" />

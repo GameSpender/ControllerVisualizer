@@ -20,6 +20,8 @@
 #include "Init.h"
 #include "Actor.h"
 #include "AssetManager.h"
+#include "SoundManager.h"
+#include "EventHandler.h"
 
 #include "ship.h"
 #include "BindingGenerator.h"
@@ -129,10 +131,15 @@ int main()
     // ----------------- new stuff -------------------
 
     InputSystem inputSystem;
+    EventBus eventBus;
+    AssetManager assetManager;
+    SoundManager soundManager;
+    EventHandler eventHandler(&eventBus);
+    ProjectileSystem projectileSystem;
+
     PlayerInput playerInput;
     PlayerInput player2Input;
-    EventBus mainBus;
-    AssetManager assetManager;
+
     InputDevice keyboard;
     InputDevice gamepad;
     InputDevice gamepad2;
@@ -143,6 +150,12 @@ int main()
 
     assetManager.loadTexture("grass", "res/grass.png");
     assetManager.loadTexture("ship", "res/ship.png");
+    assetManager.loadTexture("laser_shot", "res/projectile.png");
+
+    soundManager.loadSound("laser_shot", "assets/shoot.wav");
+    soundManager.loadSound("minigun_spool", "assets/minigun_rev.wav");
+
+    eventHandler.init(&soundManager, &projectileSystem);
 
     keyboard = {
         .type = DeviceType::Keyboard,
@@ -178,22 +191,41 @@ int main()
     inputSystem.players.push_back(player2Input);
 
 
-    Ship playerShip;
-    playerShip.spriteName = "ship";
-    playerShip.screenMax = vec2(screenWidth, screenHeight);
-    playerShip.init(&inputSystem.players.front(), &mainBus);
-    playerShip.respawn(vec2(500, 500));
-    playerShip.scale = vec2(50);
+    std::shared_ptr<Ship> playerShip = std::make_shared<Ship>();
+    playerShip->spriteName = "ship";
+    playerShip->screenMax = vec2(screenWidth, screenHeight);
+    playerShip->init(&inputSystem.players.front(), &eventBus);
+    playerShip->respawn(vec2(500, 500));
+    playerShip->scale = vec2(50.0f);
 
-    Ship player2Ship;
-    player2Ship.spriteName = "ship";
-    player2Ship.screenMax = vec2(screenWidth, screenHeight);
-    player2Ship.init(&inputSystem.players[1], &mainBus);
-    player2Ship.respawn(vec2(1000, 500));
-    player2Ship.scale = vec2(50);
+    // Create primary hardpoint and attach a weapon
+    auto primaryHP = std::make_shared<Hardpoint>();
+    auto laserGun = std::make_shared<LaserGun>();
+    laserGun->init(&projectileSystem, &eventBus);
+    primaryHP->attachWeapon(laserGun);
+
+    // Add hardpoint to ship and bind to action
+    playerShip->addHardpoint(primaryHP, Action::Shoot);
+
+
+    std::shared_ptr<Ship> player2Ship = std::make_shared<Ship>();
+    player2Ship->spriteName = "ship";
+    player2Ship->screenMax = vec2(screenWidth, screenHeight);
+    player2Ship->init(&inputSystem.players[1], &eventBus);
+    player2Ship->respawn(vec2(500, 500));
+    player2Ship->scale = vec2(50.0f);
+
+    // Create primary hardpoint and attach a weapon
+    auto primaryHP2 = std::make_shared<Hardpoint>();
+    auto laserMinigun = std::make_shared<LaserMinigun>();
+    laserMinigun->init(&projectileSystem, &eventBus);
+    primaryHP2->attachWeapon(laserMinigun);
+
+    // Add hardpoint to ship and bind to action
+    player2Ship->addHardpoint(primaryHP2, Action::Shoot);
 
     TestActor testActor("grass");
-    testActor.init(&inputSystem.players.front(), &mainBus);
+    testActor.init(&inputSystem.players.front(), &eventBus);
     testActor.position = vec2(100, 100);
     testActor.scale = vec2(50);
 
@@ -215,8 +247,14 @@ int main()
         inputSystem.update();
         
         testActor.update(dt);
-        playerShip.update(dt);
-        player2Ship.update(dt);
+        playerShip->update(dt);
+        player2Ship->update(dt);
+
+        projectileSystem.update(dt);
+
+        eventHandler.processEvents();
+
+        eventBus.clear();
 
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
@@ -248,9 +286,11 @@ int main()
             
             spriteRenderer.Draw(assetManager.getTexture(testActor.spriteName)->id, testActor.getWorldMatrix());
 
-            spriteRenderer.Draw(assetManager.getTexture(playerShip.spriteName)->id, playerShip.getWorldMatrix());
+            spriteRenderer.Draw(assetManager.getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
 
-            spriteRenderer.Draw(assetManager.getTexture(player2Ship.spriteName)->id, player2Ship.getWorldMatrix());
+            spriteRenderer.Draw(assetManager.getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
+
+            projectileSystem.render(spriteRenderer, assetManager);
             
 
             //glBindFramebuffer(GL_FRAMEBUFFER, 0);

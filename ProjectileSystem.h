@@ -21,6 +21,18 @@ public:
         }
     }
 
+    template<typename T, typename... Args>
+    void addProjectile(Args&&... args) {
+        projectiles.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+    }
+
+    // Optional helper to create and add in-place
+    template <typename T, typename... Args>
+    void spawnProjectile(Args&&... args) {
+        auto proj = std::make_unique<T>(std::forward<Args>(args)...);
+        projectiles.push_back(std::move(proj));
+    }
+
 private:
     void removeDead() {
         projectiles.erase(

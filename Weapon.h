@@ -1,27 +1,252 @@
 #pragma once
 #include "Actor.h"
-#include "EventBus.h"
-
-enum WeaponType {
-	LaserGun, Minigun
-};
-
-struct WeaponFiredEvent {
-	vec2 position;
-	vec2 direction;
-	WeaponType type;
-};
+#include "ProjectileSystem.h"
+#include "Events.h"
 
 
 class Weapon : public Actor2D{
+protected:
+    ProjectileSystem* projectileSystem;
 	
 public:
 	double shotInterval;
 	double nextShot;
 
+    float damage;
+    int team;
 
-	virtual void startFiring() = 0;
-	virtual void stopFiring() = 0;
+    void init(ProjectileSystem* projectileSystem, EventBus* eventBus) {
+        this->projectileSystem = projectileSystem;
+        events = eventBus;
+    }
+
+
+    virtual void startFiring() {};
+    virtual void stopFiring() {};
 
 };
+
+
+class Hardpoint : public Transform2D {
+public:
+    std::shared_ptr<Weapon> weapon;
+
+    Hardpoint() = default;
+
+    void attachWeapon(const std::shared_ptr<Weapon>& w) {
+        weapon = w;
+        if (weapon)
+            addChild(weapon); // weapon follows hardpoint
+    }
+
+    void detachWeapon() {
+        if (weapon) {
+            removeChild(weapon);
+            weapon->stopFiring();
+            weapon.reset();
+        }
+    }
+
+    // Simple interface for firing
+    void startFiring() {
+        if (weapon)
+            weapon->startFiring();
+    }
+
+    void stopFiring() {
+        if (weapon)
+            weapon->stopFiring();
+    }
+
+    void update(double dt) override {
+        if (weapon)
+            weapon->update(dt);
+    }
+};
+
+
+class LaserGun : public Weapon {
+    bool firing = false;
+
+public:
+    LaserGun() {
+        shotInterval = 0.1f;
+        damage = 25.0f;
+        team = 0;
+    }
+    
+    float shotSpeed = 4000.0f;
+    float deviation = 1.0f;
+    float lifetime = 3.0f;
+    
+
+    void startFiring() override { firing = true; }
+    void stopFiring() override { firing = false; }
+
+    void update(double dt) override {
+        nextShot -= dt;
+
+
+        if (!firing) return;
+
+        
+        if (nextShot <= 0) {
+            nextShot = shotInterval;
+
+
+            auto parentPtr = parent.lock();
+            if (!parentPtr) return;
+
+            // spawn projectile
+            LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
+            projectile.scale = getWorldScale() / 1.5f;
+
+            projectileSystem->addProjectile<LaserProjectile>(projectile);
+
+            events->emit(ShootEvent{
+                .position = getWorldPosition(),
+                .direction = forwardWorld(),
+                .projectileType = "laser_shot",
+                .soundName = "laser_shot",
+                .effectName = "laser_shot"
+                });
+        }
+    }
+};
+
+class LaserMinigun : public Weapon {
+    bool firing = false;
+    float currentHeat = 0.0f;
+    bool overheated = false;
+    float spoolTimeRemaining = 0.0f; // seconds left to fully spool
+    bool spoolSoundPlaying = false;  // track if spool sound is active
+
+public:
+    LaserMinigun() {
+        shotInterval = 0.05f;
+        damage = 25.0f;
+        team = 0;
+        spoolTimeRemaining = spool; // start fully unspooled
+    }
+
+    // Minigun properties
+    float shotSpeed = 4000.0f;
+    float lifetime = 3.0f;
+
+    // Heat / spool system
+    float spool = 2.0f;        // seconds to spool
+    float spoolDown = 1.0f;    // seconds per second to spool down
+    float heatPerShot = 2.0f;
+    float maxHeat = 100.0f;
+    float dissipation = 15.0f;
+
+    void startFiring() override {
+        firing = true;
+
+        // Start spool sound if not already and gun not overheated
+        if (!spoolSoundPlaying && events && !overheated) {
+            float startTime = spool - spoolTimeRemaining; // 0 = unspooled, 1 = fully spooled
+            events->emit(SoundEvent{
+                .owner = this,
+                .soundName = "minigun_spool",
+                .startTime = startTime
+                });
+            spoolSoundPlaying = true;
+        }
+    }
+
+    void stopFiring() override {
+        firing = false;
+
+        // Stop spool sound
+        if (spoolSoundPlaying && events) {
+            events->emit(SoundEvent{
+                .owner = this,
+                .soundName = "minigun_spool",
+                .stop = true
+                });
+            spoolSoundPlaying = false;
+        }
+    }
+
+    void update(double dt) override {
+        nextShot -= dt;
+
+        // Dissipate heat
+        if (currentHeat > 0.0f)
+            currentHeat = std::max(0.0f, currentHeat - dissipation * (float)dt);
+
+        // Recover from overheat if cooled
+        if (overheated && currentHeat == 0.0f)
+            overheated = false;
+
+        // Handle firing logic
+        if (!firing || overheated) {
+            // Spool down when not firing
+            spoolTimeRemaining = std::min(spool, spoolTimeRemaining + spoolDown * (float)dt);
+
+            // Stop spool sound if it was playing
+            if (spoolSoundPlaying && events) {
+                events->emit(SoundEvent{
+                    .owner = this,
+                    .soundName = "minigun_spool",
+                    .stop = true
+                    });
+                spoolSoundPlaying = false;
+            }
+            return;
+        }
+
+        // Spool up
+        if (spoolTimeRemaining > 0.0f) {
+            spoolTimeRemaining -= (float)dt;
+            spoolTimeRemaining = std::max(0.0f, spoolTimeRemaining);
+
+
+            return;
+        }
+
+        // Gun fully spooled, check overheat
+        if (currentHeat >= maxHeat) {
+            overheated = true;
+
+            // Stop spool sound
+            if (spoolSoundPlaying && events) {
+                events->emit(SoundEvent{
+                    .owner = this,
+                    .soundName = "minigun_spool",
+                    .stop = true
+                    });
+                spoolSoundPlaying = false;
+            }
+            return;
+        }
+
+        // Fire projectile
+        if (nextShot <= 0) {
+            nextShot = shotInterval;
+            currentHeat += heatPerShot;
+
+            auto parentPtr = parent.lock();
+            if (!parentPtr) return;
+
+            // Spawn projectile
+            LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
+            projectile.scale = getWorldScale() / 1.5f;
+            projectileSystem->addProjectile<LaserProjectile>(projectile);
+
+            // Emit shooting event
+            if (events) {
+                events->emit(ShootEvent{
+                    .position = getWorldPosition(),
+                    .direction = forwardWorld(),
+                    .projectileType = "laser_shot",
+                    .soundName = "laser_shot",
+                    .effectName = "laser_shot"
+                    });
+            }
+        }
+    }
+};
+
 

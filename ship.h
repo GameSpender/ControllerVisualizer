@@ -9,6 +9,8 @@
 #include "EventBus.h"
 #include "Actor.h"
 #include <string>
+#include "Events.h"
+#include "Weapon.h"
 
 
 using namespace glm;
@@ -44,6 +46,10 @@ public:
 
     glm::vec2 targetRot = glm::vec2(0.0f);
 
+    std::vector<std::shared_ptr<Hardpoint>> hardpoints;
+
+    std::unordered_map<Action, std::vector<std::shared_ptr<Hardpoint>>> actionMap;
+
     bool destroyed = false;
 
     Ship() = default;
@@ -59,11 +65,12 @@ public:
 
         
 
-        handleInput();
+        handleInput(dt);
 
-        applyThrust(thrustDir, dt);
-        applyRotationThrust(targetRot, thrustDir, dt);
+        vec2 thrust = applyThrust(thrustDir, dt);
+        float rotThrust = applyRotationThrust(targetRot, thrustDir, dt);
         
+        float thrustIntensity = length(thrust) + rotThrust;
 
         //produceParticles(1.0f, dt);
         // Movement integration
@@ -106,7 +113,7 @@ public:
         return vec2(0);
     }
 
-    void handleInput() {
+    void handleInput(double dt) {
         if (hasInput()) {
             setThrust(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));
 
@@ -115,12 +122,19 @@ public:
                 aimDir += getRelativeMouse();
             }
             setDirection(aimDir);
-        }
-    }
 
-    vec2 forward() {
-        float rot = -rotation - radians(90.0f);
-        return vec2(cos(rot), sin(rot));
+            bool click = input->isPressed(Action::Shoot);
+
+            // Update all hardpoints based on the mapped input
+            for (auto& [action, hpList] : actionMap) {
+                bool firing = input->isDown(action);
+                for (auto& hp : hpList) {
+                    if (firing) hp->startFiring();
+                    else hp->stopFiring();
+                    hp->update(dt);
+                }
+            }
+        }
     }
 
 
@@ -149,6 +163,14 @@ public:
         rotation = rot;
         setRepaired();
         markDirty();
+    }
+
+
+    void addHardpoint(const std::shared_ptr<Hardpoint>& hp, Action fireAction) {
+        hardpoints.push_back(hp);
+        addChild(hp);
+
+        actionMap[fireAction].push_back(hp);
     }
 
 private:
@@ -196,7 +218,7 @@ private:
     // -----------------------------------------
     // Rotational thrust
     // -----------------------------------------
-    void applyRotationThrust(const glm::vec2& targetDir, const glm::vec2& thrustDir, float delta)
+    float applyRotationThrust(const glm::vec2& targetDir, const glm::vec2& thrustDir, float delta)
     {
         // ----------------------
         // 1. Determine desired rotation
@@ -204,7 +226,7 @@ private:
         glm::vec2 dir = glm::length(targetDir) > 0.001f ? targetDir : thrustDir;
 
         if (glm::length(dir) < 0.001f)
-            return; // no input, do nothing
+            return 0.0f; // no input, do nothing
 
         float desiredAngle = glm::atan(dir.y, -dir.x) + glm::radians(90.0f);
 
@@ -229,6 +251,7 @@ private:
         // 4. Apply torque
         // ----------------------
         velocityRot += torque * delta;
+        return torque;
     }
 
     // Call this inside update() after moving the ship
@@ -316,3 +339,5 @@ private:
         }
     }
 };
+
+

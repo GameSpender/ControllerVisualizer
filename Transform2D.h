@@ -155,6 +155,12 @@ public:
         return vec2(sx, sy);
     }
 
+    void setRotation(vec2 dir) {
+        if (length(dir) == 0.0f) return; 
+        rotation = atan2(dir.y, -dir.x) + radians(90.0f);
+    }
+
+
 	// ---------------- Virtual ----------------
     virtual void update(double dt) {}
 };

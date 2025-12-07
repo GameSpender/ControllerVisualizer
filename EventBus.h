@@ -4,13 +4,6 @@
 
 using namespace glm;
 
-
-struct MoveEvent {
-    vec2 position;
-    vec2 direction;
-    float speed;
-};
-
 class EventBus {
 public:
     template <typename T>
