@@ -2,6 +2,7 @@
 #include "Actor.h"
 #include "ProjectileSystem.h"
 #include "Events.h"
+#include <random>
 
 
 class Weapon : public Actor2D{
@@ -14,6 +15,7 @@ public:
 
     float damage;
     int team;
+    float deviation;
 
     void init(ProjectileSystem* projectileSystem, EventBus* eventBus) {
         this->projectileSystem = projectileSystem;
@@ -76,7 +78,7 @@ public:
     }
     
     float shotSpeed = 4000.0f;
-    float deviation = 1.0f;
+    
     float lifetime = 3.0f;
     
 
@@ -128,10 +130,11 @@ public:
         damage = 8.0f;
         team = 0;
         spoolTimeRemaining = spool; // start fully unspooled
+        deviation = radians(0.6f);
     }
 
     // Minigun properties
-    float shotSpeed = 4000.0f;
+    float shotSpeed = 5000.0f;
     float lifetime = 3.0f;
 
     // Heat / spool system
@@ -140,6 +143,7 @@ public:
     float heatPerShot = 1.0f;
     float maxHeat = 100.0f;
     float dissipation = 15.0f;
+
 
     void startFiring() override {
         firing = true;
@@ -268,7 +272,26 @@ public:
             if (!parentPtr) return;
 
             // Spawn projectile
-            LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
+            // Get the base forward direction
+            vec2 dir = forwardWorld();
+
+            // Apply random deviation
+            static std::random_device rd;
+            static std::mt19937 gen(rd());
+            std::normal_distribution<float> dist(0.0f, deviation); // deviation in radians
+
+            float angleOffset = dist(gen);
+
+            // Rotate the direction vector by the angleOffset
+            float cosA = cos(angleOffset);
+            float sinA = sin(angleOffset);
+            vec2 deviatedDir = vec2(
+                dir.x * cosA - dir.y * sinA,
+                dir.x * sinA + dir.y * cosA
+            );
+
+            // Spawn projectile with deviated direction
+            LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
             projectile.scale = getWorldScale();
             projectile.spriteName = "bullet_shot";
             projectileSystem->addProjectile<LaserProjectile>(projectile);
