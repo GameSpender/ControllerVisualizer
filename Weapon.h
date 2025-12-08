@@ -16,6 +16,7 @@ public:
     float damage;
     int team;
     float deviation;
+    float recoil;
 
     void init(ProjectileSystem* projectileSystem, EventBus* eventBus) {
         this->projectileSystem = projectileSystem;
@@ -143,21 +144,22 @@ class LaserMinigun : public Weapon {
 
 public:
     LaserMinigun() {
-        shotInterval = 0.025f;
+        shotInterval = 60.0f / 6000.0f;
         damage = 8.0f;
         team = 0;
         spoolTimeRemaining = spool; // start fully unspooled
         deviation = radians(0.6f);
+        recoil = 1.0f;
     }
 
     // Minigun properties
-    float shotSpeed = 5000.0f;
-    float lifetime = 3.0f;
+    float shotSpeed = 7000.0f;
+    float lifetime = 2.0f;
 
     // Heat / spool system
     float spool = 0.8f;        // seconds to spool
     float spoolDown = 1.0f;    // seconds per second to spool down
-    float heatPerShot = 1.0f;
+    float heatPerShot = 0.1f;
     float maxHeat = 100.0f;
     float dissipation = 15.0f;
 
@@ -331,7 +333,7 @@ public:
 
 
         // --- Compute recoil impulse ---
-        float recoilMagnitude = damage / 300.0f * shotSpeed; // scale as needed
+        float recoilMagnitude = damage * recoil / 1000.0f * shotSpeed; // scale as needed
         vec2 recoilImpulse = -deviatedDir * recoilMagnitude; // opposite to shot
 
         // --- Compute rotational impulse ---
