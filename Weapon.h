@@ -3,7 +3,7 @@
 #include "ProjectileSystem.h"
 #include "Events.h"
 #include <random>
-
+#include "Physics.h"
 
 class Weapon : public Actor2D{
 protected:
@@ -29,7 +29,7 @@ public:
 };
 
 
-class Hardpoint : public Transform2D {
+class Hardpoint : public Transform2D, public PhysicsReceiver {
 public:
     std::shared_ptr<Weapon> weapon;
 
@@ -64,6 +64,22 @@ public:
         if (weapon)
             weapon->update(dt);
     }
+
+
+    void applyImpulse(const vec2& impulse) override {
+        auto par = parent.lock();
+        if (auto receiver = dynamic_cast<PhysicsReceiver*>(par.get())) {
+            receiver->applyImpulse(impulse);
+        }
+    }
+
+    virtual void applyAngularImpulse(float angularImpulse) {
+        auto par = parent.lock();
+        if (auto receiver = dynamic_cast<PhysicsReceiver*>(par.get())) {
+            receiver->applyAngularImpulse(angularImpulse);
+        }
+    }
+
 };
 
 
@@ -268,46 +284,60 @@ public:
             nextShot = shotInterval;
             currentHeat += heatPerShot;
 
-            auto parentPtr = parent.lock();
-            if (!parentPtr) return;
-
-            // Spawn projectile
-            // Get the base forward direction
-            vec2 dir = forwardWorld();
-
-            // Apply random deviation
-            static std::random_device rd;
-            static std::mt19937 gen(rd());
-            std::normal_distribution<float> dist(0.0f, deviation); // deviation in radians
-
-            float angleOffset = dist(gen);
-
-            // Rotate the direction vector by the angleOffset
-            float cosA = cos(angleOffset);
-            float sinA = sin(angleOffset);
-            vec2 deviatedDir = vec2(
-                dir.x * cosA - dir.y * sinA,
-                dir.x * sinA + dir.y * cosA
-            );
-
-            // Spawn projectile with deviated direction
-            LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
-            projectile.scale = getWorldScale();
-            projectile.spriteName = "bullet_shot";
-            projectileSystem->addProjectile<LaserProjectile>(projectile);
-
-            // Emit shooting event
-            /*if (events) {
-                events->emit(ShootEvent{
-                    .position = getWorldPosition(),
-                    .direction = forwardWorld(),
-                    .projectileType = "laser_shot",
-                    .soundName = "laser_shot",
-                    .effectName = "laser_shot"
-                    });
-            }*/
+            fireProjectile();
         }
     }
+
+    void sendProjectileImpulse(vec2 intensity, float rotation) {
+        auto par = parent.lock();
+        if (auto receiver = dynamic_cast<PhysicsReceiver*>(par.get())) {
+            receiver->applyImpulse(intensity);
+            receiver->applyAngularImpulse(rotation);
+        }
+    }
+
+    void fireProjectile() {
+        auto parentPtr = parent.lock();
+        if (!parentPtr) return;
+
+        // Spawn projectile
+        // Get the base forward direction
+        vec2 dir = forwardWorld();
+
+        // Apply random deviation
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::normal_distribution<float> dist(0.0f, deviation); // deviation in radians
+
+        float angleOffset = dist(gen);
+
+        // Rotate the direction vector by the angleOffset
+        float cosA = cos(angleOffset);
+        float sinA = sin(angleOffset);
+        vec2 deviatedDir = vec2(
+            dir.x * cosA - dir.y * sinA,
+            dir.x * sinA + dir.y * cosA
+        );
+
+
+        // --- Compute recoil impulse ---
+        float recoilMagnitude = damage / 300.0f * shotSpeed; // scale as needed
+        vec2 recoilImpulse = -deviatedDir * recoilMagnitude; // opposite to shot
+
+        // --- Compute rotational impulse ---
+        // Use perpendicular to shot vector relative to ship forward
+        vec2 right = vec2(-dir.y, dir.x); // right-hand perpendicular
+        float angularImpulse = dot(recoilImpulse, right); // 0.1 = scaling factor for rotation
+        sendProjectileImpulse(recoilImpulse, angularImpulse);
+
+        // Spawn projectile with deviated direction
+        LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
+        projectile.scale = getWorldScale();
+        projectile.spriteName = "bullet_shot";
+        projectileSystem->addProjectile<LaserProjectile>(projectile);
+    }
+
+
 };
 
 

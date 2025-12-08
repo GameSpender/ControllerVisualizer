@@ -268,7 +268,7 @@ int main()
 
 
         double currentTime = glfwGetTime();
-        if (nextFrameTime < currentTime) {
+        if (nextFrameTime <= currentTime) {
             double renderTime = currentTime;
 
             //glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
