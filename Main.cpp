@@ -156,6 +156,7 @@ int main()
     soundManager.loadSound("laser_shot", "assets/shoot.wav");
     soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
     soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
+	soundManager.loadSound("minigun_stop", "assets/minigun_stop.wav");
 
     eventHandler.init(&soundManager, &projectileSystem);
 
@@ -202,6 +203,7 @@ int main()
 
     // Create primary hardpoint and attach a weapon
     auto primaryHP = std::make_shared<Hardpoint>();
+	primaryHP->position = vec2(0, 1.0f);
     auto laserGun = std::make_shared<LaserGun>();
     laserGun->init(&projectileSystem, &eventBus);
     primaryHP->attachWeapon(laserGun);
@@ -219,6 +221,7 @@ int main()
 
     // Create primary hardpoint and attach a weapon
     auto primaryHP2 = std::make_shared<Hardpoint>();
+	primaryHP2->position = vec2(0, 1.0f);
     auto laserMinigun = std::make_shared<LaserMinigun>();
     laserMinigun->init(&projectileSystem, &eventBus);
     primaryHP2->attachWeapon(laserMinigun);
