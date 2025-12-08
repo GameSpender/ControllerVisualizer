@@ -113,7 +113,6 @@ public:
             float startMs = startTimeSeconds * 1000.0f;
             // Clamp to sound length
             startMs = std::min(startMs, (float)s->getPlayLength());
-            std::cout << s->setPlayPosition(startMs) << " " << startMs << std::endl;
         }
 
         // Unpause to start playback

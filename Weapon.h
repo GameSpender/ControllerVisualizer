@@ -139,6 +139,7 @@ class LaserMinigun : public Weapon {
     float spoolTimeRemaining = 0.0f; // seconds left to fully spool
     bool spoolSoundPlaying = false;  // track if spool sound is active
     bool shootSoundPlaying = false;
+	bool stoppedFiring = true;
 
 public:
     LaserMinigun() {
@@ -185,15 +186,19 @@ public:
                 .owner = &spoolSoundPlaying,
                 .soundName = "minigun_spool",
                 .stop = true
-                });
+            });
             spoolSoundPlaying = false;
         }
         if (shootSoundPlaying && events) {
             events->emit(SoundEvent{
+                .owner = &stoppedFiring,
+                .soundName = "minigun_stop"
+            });
+            events->emit(SoundEvent{
                 .owner = &shootSoundPlaying,
                 .soundName = "minigun_shoot",
                 .stop = true
-                });
+            });
             shootSoundPlaying = false;
         }
     }
@@ -265,8 +270,13 @@ public:
                     .stop = true
                     });
                 spoolSoundPlaying = false;
+
             }
             if (shootSoundPlaying && events) {
+                events->emit(SoundEvent{
+                    .owner = &stoppedFiring,
+                    .soundName = "minigun_stop"
+                    });
                 events->emit(SoundEvent{
                 .owner = &shootSoundPlaying,
                 .soundName = "minigun_shoot",
