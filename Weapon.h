@@ -18,9 +18,10 @@ public:
     float deviation;
     float recoil;
 
-    void init(ProjectileSystem* projectileSystem, EventBus* eventBus) {
+    void initWeapon(ProjectileSystem* projectileSystem, EventBus* eventBus, CollisionSystem* collisionPtr) {
         this->projectileSystem = projectileSystem;
         events = eventBus;
+        collisions = collisionPtr;
     }
 
 
@@ -119,8 +120,8 @@ public:
             // spawn projectile
             LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
             projectile.scale = getWorldScale() / 1.5f;
-
-            projectileSystem->addProjectile<LaserProjectile>(projectile);
+            auto proj = projectileSystem->addProjectile<LaserProjectile>(projectile);
+            proj->init(collisions);
 
             events->emit(ShootEvent{
                 .position = getWorldPosition(),
@@ -346,7 +347,8 @@ public:
         LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
         projectile.scale = getWorldScale();
         projectile.spriteName = "bullet_shot";
-        projectileSystem->addProjectile<LaserProjectile>(projectile);
+        auto proj = projectileSystem->addProjectile<LaserProjectile>(projectile);
+        proj->init(collisions);
     }
 
 

@@ -5,7 +5,8 @@
 
 class ProjectileSystem {
 public:
-    std::vector<std::unique_ptr<Projectile>> projectiles;
+    std::vector<std::shared_ptr<Projectile>> projectiles;
+
 
     void update(double dt) {
         for (auto& p : projectiles)
@@ -22,16 +23,18 @@ public:
     }
 
     template<typename T, typename... Args>
-    void addProjectile(Args&&... args) {
-        projectiles.push_back(std::make_unique<T>(std::forward<Args>(args)...));
+    std::shared_ptr<T> addProjectile(Args&&... args) {
+        auto proj = std::make_shared<T>(std::forward<Args>(args)...);
+        projectiles.push_back(proj);
+        return proj;
     }
 
-    // Optional helper to create and add in-place
-    template <typename T, typename... Args>
-    void spawnProjectile(Args&&... args) {
-        auto proj = std::make_unique<T>(std::forward<Args>(args)...);
-        projectiles.push_back(std::move(proj));
+    template<typename T, typename... Args>
+    std::shared_ptr<T> spawnProjectile(Args&&... args) {
+        return addProjectile<T>(std::forward<Args>(args)...);
     }
+
+
 
 private:
     void removeDead() {

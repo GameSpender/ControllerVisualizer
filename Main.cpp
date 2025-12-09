@@ -23,8 +23,10 @@
 #include "SoundManager.h"
 #include "EventHandler.h"
 
+#include "GamepadObject.h"
 #include "ship.h"
 #include "BindingGenerator.h"
+#include "CollisionSystem.h"
 
 using namespace glm;
 
@@ -136,6 +138,7 @@ int main()
     SoundManager soundManager;
     EventHandler eventHandler(&eventBus);
     ProjectileSystem projectileSystem;
+    CollisionSystem collisionSystem;
 
     PlayerInput playerInput;
     PlayerInput player2Input;
@@ -144,6 +147,8 @@ int main()
     InputDevice gamepad;
     InputDevice gamepad2;
     InputDevice mouse;
+
+    GamepadInput gamepadInput;
     
 
     // ----------------- new stuff -------------------
@@ -152,6 +157,23 @@ int main()
     assetManager.loadTexture("ship", "res/ship.png");
     assetManager.loadTexture("laser_shot", "res/projectile.png");
     assetManager.loadTexture("bullet_shot", "res/bullet.png");
+
+    assetManager.loadTexture("gamepad_body", "res/body.png");
+    assetManager.loadTexture("button_A", "res/a_idle.png");
+    assetManager.loadTexture("button_A_pressed", "res/a_pressed.png");
+    assetManager.loadTexture("button_B", "res/B_idle.png");
+    assetManager.loadTexture("button_B_pressed", "res/B_pressed.png");
+    assetManager.loadTexture("button_X", "res/X_idle.png");
+    assetManager.loadTexture("button_X_pressed", "res/X_pressed.png");
+    assetManager.loadTexture("button_Y", "res/Y_idle.png");
+    assetManager.loadTexture("button_Y_pressed", "res/Y_pressed.png");
+    assetManager.loadTexture("stick_head", "res/stick_head.png");
+    assetManager.loadTexture("stick_head_pressed", "res/stick_head_pressed.png");
+    assetManager.loadTexture("dpad", "res/dpad_idle.png");
+    assetManager.loadTexture("dpad_pressed", "res/dpad_pressed.png");
+    assetManager.loadTexture("bumper", "res/bumper.png");
+    assetManager.loadTexture("bumper_pressed", "res/bumper_pressed.png");
+
 
     soundManager.loadSound("laser_shot", "assets/shoot.wav");
     soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
@@ -201,11 +223,24 @@ int main()
     playerShip->respawn(vec2(500, 500));
     playerShip->scale = vec2(50.0f);
 
+    std::shared_ptr<Collider2D> shipCollider = std::make_shared<Collider2D>(Collider2D::ShapeType::Rectangle);
+    shipCollider->mask = CollisionLayer::All;
+    shipCollider->layer = CollisionLayer::Player;
+    collisionSystem.addCollider(shipCollider);
+    playerShip->addChild(shipCollider);
+    shipCollider->onCollisionEnter = [](Collider2D*) {
+        std::cout << "Ship 1 collided with!\n";
+        };
+    shipCollider->onCollisionExit = [](Collider2D*) {
+        std::cout << "Ship 1 stopped being collided with!\n";
+        };
+
+
     // Create primary hardpoint and attach a weapon
     auto primaryHP = std::make_shared<Hardpoint>();
-	primaryHP->position = vec2(0, -1.0f);
+	primaryHP->position = vec2(0, -1.4f);
     auto laserGun = std::make_shared<LaserGun>();
-    laserGun->init(&projectileSystem, &eventBus);
+    laserGun->initWeapon(&projectileSystem, &eventBus, &collisionSystem);
     primaryHP->attachWeapon(laserGun);
 
     // Add hardpoint to ship and bind to action
@@ -219,11 +254,17 @@ int main()
     player2Ship->respawn(vec2(500, 500));
     player2Ship->scale = vec2(50.0f);
 
+    std::shared_ptr<Collider2D> ship2Collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Rectangle);
+    ship2Collider->mask = CollisionLayer::All;
+    ship2Collider->layer = CollisionLayer::Player;
+    collisionSystem.addCollider(ship2Collider);
+    player2Ship->addChild(ship2Collider);
+
     // Create primary hardpoint and attach a weapon
     auto primaryHP2 = std::make_shared<Hardpoint>();
-	primaryHP2->position = vec2(0, -1.0f);
+	primaryHP2->position = vec2(0, -2.0f);
     auto laserMinigun = std::make_shared<LaserMinigun>();
-    laserMinigun->init(&projectileSystem, &eventBus);
+    laserMinigun->initWeapon(&projectileSystem, &eventBus, &collisionSystem);
     primaryHP2->attachWeapon(laserMinigun);
 
     // Add hardpoint to ship and bind to action
@@ -234,6 +275,10 @@ int main()
     testActor.position = vec2(100, 100);
     testActor.scale = vec2(50);
 
+
+    std::shared_ptr<GamepadObject> gamepadVisualizer = std::make_shared<GamepadObject>();
+    gamepadVisualizer->initHiearchy();
+    gamepadVisualizer->position = vec2(screenWidth / 2, screenHeight * 0.3);
 
     int framerateCap = 75;
     double frameInterval = 1.0f / framerateCap;
@@ -256,6 +301,12 @@ int main()
         player2Ship->update(dt);
 
         projectileSystem.update(dt);
+
+        gamepadInput.updateFromGLFW(gamepad.id);
+        gamepadVisualizer->updateFromInput(gamepadInput);
+        gamepadVisualizer->update(dt);
+
+        collisionSystem.update();
 
         eventHandler.processEvents();
 
@@ -285,15 +336,32 @@ int main()
 
             {
                 auto size = vec2(100, 100);
-                auto pos = vec2(screenWidth - 60, 30);
+                auto pos = vec2(screenWidth - 60, 60);
                 spriteRenderer.Draw(signatureTexture, pos, size);
             }
             
+            spriteRenderer.Draw(assetManager.getTexture(gamepadVisualizer->spriteName)->id, gamepadVisualizer->getWorldMatrix());
+            for (auto& child : gamepadVisualizer->children)
+            {
+                if (auto actor = std::dynamic_pointer_cast<Actor2D>(child))
+                {
+                    spriteRenderer.Draw(
+                        assetManager.getTexture(actor->spriteName)->id,
+                        actor->getWorldMatrix()
+                    );
+                }
+            }
+
+
             spriteRenderer.Draw(assetManager.getTexture(testActor.spriteName)->id, testActor.getWorldMatrix());
 
             spriteRenderer.Draw(assetManager.getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
 
             spriteRenderer.Draw(assetManager.getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
+
+            
+
+
 
             projectileSystem.render(spriteRenderer, assetManager);
             
