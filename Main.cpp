@@ -97,6 +97,7 @@ int main()
 
     unsigned int rectShader = createShader("shaders/rect.vert", "shaders/rect.frag");
 	unsigned int pulseShader = createShader("shaders/passthrough.vert", "shaders/pulse_effect.frag");
+    unsigned int debugShader = createShader("shaders/color.vert", "shaders/color.frag");
 
     glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -1.0f, 1.0f);
     glUseProgram(rectShader);
@@ -152,6 +153,8 @@ int main()
     
 
     // ----------------- new stuff -------------------
+
+    bool debugWeapon = false;
 
     assetManager.loadTexture("grass", "res/grass.png");
     assetManager.loadTexture("ship", "res/ship.png");
@@ -223,11 +226,13 @@ int main()
     playerShip->respawn(vec2(500, 500));
     playerShip->scale = vec2(50.0f);
 
-    std::shared_ptr<Collider2D> shipCollider = std::make_shared<Collider2D>(Collider2D::ShapeType::Rectangle);
+    std::shared_ptr<Collider2D> shipCollider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
     shipCollider->mask = CollisionLayer::All;
     shipCollider->layer = CollisionLayer::Player;
+    shipCollider->scale = vec2(0.8f);
     collisionSystem.addCollider(shipCollider);
     playerShip->addChild(shipCollider);
+
     shipCollider->onCollisionEnter = [](Collider2D*) {
         std::cout << "Ship 1 collided with!\n";
         };
@@ -238,7 +243,7 @@ int main()
 
     // Create primary hardpoint and attach a weapon
     auto primaryHP = std::make_shared<Hardpoint>();
-	primaryHP->position = vec2(0, -1.4f);
+	primaryHP->position = vec2(0, -0.9f);
     auto laserGun = std::make_shared<LaserGun>();
     laserGun->initWeapon(&projectileSystem, &eventBus, &collisionSystem);
     primaryHP->attachWeapon(laserGun);
@@ -254,15 +259,16 @@ int main()
     player2Ship->respawn(vec2(500, 500));
     player2Ship->scale = vec2(50.0f);
 
-    std::shared_ptr<Collider2D> ship2Collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Rectangle);
+    std::shared_ptr<Collider2D> ship2Collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
     ship2Collider->mask = CollisionLayer::All;
     ship2Collider->layer = CollisionLayer::Player;
+    ship2Collider->scale = vec2(0.8f);
     collisionSystem.addCollider(ship2Collider);
     player2Ship->addChild(ship2Collider);
 
     // Create primary hardpoint and attach a weapon
     auto primaryHP2 = std::make_shared<Hardpoint>();
-	primaryHP2->position = vec2(0, -2.0f);
+	primaryHP2->position = vec2(0, -1.0f);
     auto laserMinigun = std::make_shared<LaserMinigun>();
     laserMinigun->initWeapon(&projectileSystem, &eventBus, &collisionSystem);
     primaryHP2->attachWeapon(laserMinigun);
@@ -286,6 +292,7 @@ int main()
 
     double lastTime = 0.0f;
 
+    LineVisualizer line(vec2(0), vec2(0), vec3(255, 255, 0));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -315,10 +322,6 @@ int main()
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
 
-
-
-		//directionLine.start = ship->getWorldPosition();
-		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
 
 
         double currentTime = glfwGetTime();
@@ -359,8 +362,12 @@ int main()
 
             spriteRenderer.Draw(assetManager.getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
 
+            if (debugWeapon) {
+                line.start = laserMinigun->getWorldPosition();
+                line.end = line.start + laserMinigun->forwardWorld() * 1000.0f;
+                line.Draw(debugShader, screenWidth, screenHeight);
+            }
             
-
 
 
             projectileSystem.render(spriteRenderer, assetManager);

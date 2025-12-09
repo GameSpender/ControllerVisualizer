@@ -33,6 +33,7 @@ public:
             this->hitSomething(other ? dynamic_cast<Transform2D*>(other->parent.lock().get()) : nullptr);
             };
 
+        collider->scale = vec2(0.3f);
         collisions->addCollider(collider);
     }
 
