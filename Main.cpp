@@ -42,6 +42,8 @@ const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
 
+bool debugWeapon = true;
+
 
 
 
@@ -121,6 +123,9 @@ int main()
     InputDevice gamepad;
     InputDevice gamepad2;
     InputDevice mouse;
+
+	GamepadInput gamepadInput;
+    
     
     Services::init(
         new InputSystem,
@@ -128,7 +133,8 @@ int main()
         new AssetManager,
 		new SoundManager,
         new EventHandler,
-		new ProjectileSystem
+		new ProjectileSystem,
+        new CollisionSystem
     );
 
 
@@ -199,7 +205,7 @@ int main()
     shipCollider->mask = CollisionLayer::All;
     shipCollider->layer = CollisionLayer::Player;
     shipCollider->scale = vec2(0.8f);
-    collisionSystem.addCollider(shipCollider);
+    Services::collisions->addCollider(shipCollider);
     playerShip->addChild(shipCollider);
 
     shipCollider->onCollisionEnter = [](Collider2D*) {
@@ -230,7 +236,7 @@ int main()
     ship2Collider->mask = CollisionLayer::All;
     ship2Collider->layer = CollisionLayer::Player;
     ship2Collider->scale = vec2(0.8f);
-    collisionSystem.addCollider(ship2Collider);
+    Services::collisions->addCollider(ship2Collider);
     player2Ship->addChild(ship2Collider);
 
     // Create primary hardpoint and attach a weapon
@@ -279,15 +285,15 @@ int main()
 
         Services::projectiles->update(dt);
 
-        Services::eventHandler->processEvents();
+        
         gamepadInput.updateFromGLFW(gamepad.id);
         gamepadVisualizer->updateFromInput(gamepadInput);
         gamepadVisualizer->update(dt);
 
-        collisionSystem.update();
+        Services::collisions->update();
 
-        eventHandler.processEvents();
 
+        Services::eventHandler->processEvents();
         Services::eventBus->clear();
 
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)

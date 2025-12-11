@@ -138,7 +138,7 @@ public:
 
     // ---------------- World-space helpers ----------------
 
-    vec2 getWorldPosition() {
+    glm::vec2 getWorldPosition() {
         const mat3& m = getWorldMatrix();
         return vec2(m[2].x, m[2].y);
     }
@@ -148,7 +148,7 @@ public:
         return atan2(m[1][0], m[0][0]);
     }
 
-    vec2 getWorldScale() {
+    glm::vec2 getWorldScale() {
         const mat3& m = getWorldMatrix();
         float sx = length(vec2(m[0][0], m[1][0]));
         float sy = length(vec2(m[0][1], m[1][1]));

@@ -22,12 +22,6 @@ public:
     float deviation;
     float recoil;
 
-    void initWeapon(ProjectileSystem* projectileSystem, EventBus* eventBus, CollisionSystem* collisionPtr) {
-        this->projectileSystem = projectileSystem;
-        events = eventBus;
-        collisions = collisionPtr;
-    }
-
 
     virtual void startFiring() {};
     virtual void stopFiring() {};
@@ -122,10 +116,17 @@ public:
             if (!parentPtr) return;
 
             // spawn projectile
-            LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
-            projectile.scale = getWorldScale() / 1.5f;
-            auto proj = projectileSystem->addProjectile<LaserProjectile>(projectile);
-            proj->init(collisions);
+
+            auto projectile = std::make_shared<LaserProjectile>(
+                getWorldPosition(),
+                forwardWorld() * shotSpeed,
+                lifetime,
+                damage,
+                team
+			);
+            projectile->init();
+            projectile->scale = getWorldScale() / 1.5f;
+            Services::projectiles->addProjectile(projectile);
 
             Services::eventBus->emit(ShootEvent{
                 .position = getWorldPosition(),
@@ -349,24 +350,11 @@ public:
         sendProjectileImpulse(recoilImpulse, angularImpulse);
 
         // Spawn projectile with deviated direction
-        LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
-        projectile.scale = getWorldScale();
-        projectile.spriteName = "bullet_shot";
-        auto proj = projectileSystem->addProjectile<LaserProjectile>(projectile);
-        proj->init(collisions);
-    }
-
-            // Emit shooting event
-            /*if (events) {
-                events->emit(ShootEvent{
-                    .position = getWorldPosition(),
-                    .direction = forwardWorld(),
-                    .projectileType = "laser_shot",
-                    .soundName = "laser_shot",
-                    .effectName = "laser_shot"
-                    });
-            }*/
-        }
+		auto projectile = std::make_shared<LaserProjectile>(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
+        projectile->init();
+        projectile->scale = getWorldScale();
+        projectile->spriteName = "bullet_shot";
+        Services::projectiles->addProjectile(projectile);
     }
 };
 

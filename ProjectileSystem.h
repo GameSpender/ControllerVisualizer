@@ -7,7 +7,7 @@ class ProjectileSystem {
 public:
     std::vector<std::shared_ptr<Projectile>> projectiles;
 
-
+    // Update all projectiles
     void update(double dt) {
         for (auto& p : projectiles)
             p->update(dt);
@@ -15,6 +15,7 @@ public:
         removeDead();
     }
 
+    // Draw all projectiles
     void render(SpriteRenderer& renderer, AssetManager& assets) {
         for (auto& p : projectiles) {
             auto* tex = assets.getTexture(p->spriteName);
@@ -22,19 +23,10 @@ public:
         }
     }
 
-    template<typename T, typename... Args>
-    std::shared_ptr<T> addProjectile(Args&&... args) {
-        auto proj = std::make_shared<T>(std::forward<Args>(args)...);
+    // Add any projectile type
+    void addProjectile(const std::shared_ptr<Projectile>& proj) {
         projectiles.push_back(proj);
-        return proj;
     }
-
-    template<typename T, typename... Args>
-    std::shared_ptr<T> spawnProjectile(Args&&... args) {
-        return addProjectile<T>(std::forward<Args>(args)...);
-    }
-
-
 
 private:
     void removeDead() {

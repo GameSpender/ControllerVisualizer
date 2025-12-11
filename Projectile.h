@@ -6,6 +6,10 @@
 #include <vector>
 #include "Actor.h"
 
+#include "Collider.h"
+#include "CollisionSystem.h"
+#include "Services.h"
+
 using namespace glm;
 
 class Projectile : public Actor2D{
@@ -16,25 +20,23 @@ public:
 
    
 
-    Projectile(){}
+    Projectile() = default;
 
-    void init(CollisionSystem* coll) {
-        Actor2D::init(coll);
+	virtual void init() {}
 
-        if (!collisions) return;
-        std::shared_ptr<Collider2D> collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
-        addChild(collider);
+    void makeCollider(float size) {
+        auto collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
         collider->layer = CollisionLayer::Projectile;
         collider->mask = CollisionLayer::All - CollisionLayer::Projectile;
+        collider->scale = vec2(0.2f);
+        addChild(collider);
 
         // Set the collision callback
         collider->onCollisionEnter = [this](Collider2D* other) {
             // Call the virtual function
             this->hitSomething(other ? dynamic_cast<Transform2D*>(other->parent.lock().get()) : nullptr);
             };
-
-        collider->scale = vec2(0.3f);
-        collisions->addCollider(collider);
+        Services::collisions->addCollider(collider);
     }
 
     virtual void hitSomething(Transform2D* other) {
@@ -54,7 +56,7 @@ public:
     float damage = 0.0f;
 
     // Constructor with all needed parameters
-    LaserProjectile(const glm::vec2& startPos, const glm::vec2& velocity, float lifetime, float damage, int team)
+    LaserProjectile(vec2 startPos, vec2 velocity, float lifetime, float damage, int team)
     {
         this->position = startPos;  // inherited from Transform2D
         this->velocity = velocity;
@@ -63,6 +65,10 @@ public:
         this->damage = damage;
         this->team = team;
         this->spriteName = "laser_shot"; // optional, can be set externally
+    }
+     
+    void init() override {
+        makeCollider(0.5f);
     }
 
     void hitSomething(Transform2D* other) {
@@ -81,26 +87,3 @@ public:
     }
 };
 
-//class Explosion : public Projectile {
-//public:
-//    float explodeSize = 5.0f;
-//    float rotationSpeed = 0.0f;
-//    float initial_lifetime;
-//    float initial_size;
-//
-//    Explosion() {}
-//
-//    void update(double dt) override {
-//        position += velocity * dt;
-//        velocity -= velocity * friction * dt;
-//        lifetime -= dt;
-//
-//        float t = 1.0f - (lifetime / initial_lifetime);
-//        float eased = 1.0f - (1.0f - t) * (1.0f - t); // quad ease-out
-//    
-//        scale = vec2(mix(initial_size, explodeSize, eased));
-//        rotation += rotationSpeed * dt;
-//
-//        markDirty();
-//    }
-//};

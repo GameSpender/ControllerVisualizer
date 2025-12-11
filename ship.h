@@ -24,7 +24,7 @@
 using namespace glm;
 
 
-class Ship : public Actor2D, public IControllable
+class Ship : public Actor2D, public IControllable, public PhysicsReceiver
 {
 
 public:    
@@ -66,10 +66,6 @@ public:
     {
         float delta = (float)dt;
 
-        position += velocity * delta;
-        rotation += velocityRot * delta;
-
-        
 
         
         for (auto hp : hardpoints) {
@@ -137,12 +133,7 @@ public:
         }
     }
 
-    void dash(bool pressed) override {
-        if (pressed) {
-            
-            velocity += thrustDir * 2000.0f; // example dash impulse
-        }
-    }
+    void dash(bool pressed) override {}
 
 	// End of IControllable implementation
 
