@@ -1,53 +1,45 @@
 #pragma once
 #include "glm/glm.hpp"
-#include "Transform2D.h"
 
+
+class PhysicalActor2D;
+
+// Interface for objects that can receive physical forces/torques
+class PhysicsReceiver {
+public:
+    virtual ~PhysicsReceiver() = default;
+
+    // Apply a continuous force in world-space
+    virtual void applyForce(const glm::vec2& force, double dt) = 0;
+
+    // Apply an instantaneous impulse
+    virtual void applyImpulse(const glm::vec2& impulse) = 0;
+
+    // Apply torque (rotational force)
+    virtual void applyTorque(float torque, double dt) = 0;
+
+    // Apply an instantaneous angular impulse
+    virtual void applyAngularImpulse(float impulse) = 0;
+
+    // Optional: reset kinematic state
+    virtual void resetPhysics() {}
+};
+
+
+
+// --- Physics data / integrator ---
 class PhysicsComponent {
 public:
-    glm::vec2 velocity{};
-    float angularVelocity = 0.0f;
-    float mass = 5.f;
+    float mass = 5.0f;
     float friction = 0.0f;
     float angularFriction = 0.0f;
 
-    void integrate(Transform2D& t, float dt)
-    {
-        // --- 1. Integrate position and rotation ---
-        t.position += velocity * dt;
-        t.rotation += angularVelocity * dt;
+    PhysicsComponent() = default;
 
-        if (friction > 0.0f)
-            velocity -= velocity * friction * dt;
-
-        if (angularFriction > 0.0f)
-            angularVelocity -= angularVelocity * angularFriction * dt;
-    }
-    void applyForce(const glm::vec2& f, float dt) {
-        velocity += f * dt / mass;
-    }
-    void applyTorque(float t, float dt) {
-        angularVelocity += t * dt / mass;
-    }
-
-    void applyImpulse(const vec2& I) {
-        velocity += I / mass;
-    }
-
-    void applyAngularImpulse(float J) {
-        angularVelocity += J / mass;
-    }
-
-    void reset() {
-        velocity = vec2(0);
-        angularVelocity = 0.0f;
-    }
+    void integrate(PhysicalActor2D& actor, double dt, bool isKinematic = false);
+    void applyForce(PhysicalActor2D& actor, const glm::vec2& force, double dt);
+    void applyTorque(PhysicalActor2D& actor, float torque, double dt);
+    void applyImpulse(PhysicalActor2D& actor, const glm::vec2& impulse);
+    void applyAngularImpulse(PhysicalActor2D& actor, float impulse);
+    void reset(PhysicalActor2D& actor);
 };
-
-class PhysicsReceiver {
-public:
-    virtual void applyForce(const glm::vec2& force) {}
-    virtual void applyTorque(float torque) {}
-    virtual void applyImpulse(const vec2& impulse) {}
-    virtual void applyAngularImpulse(float angularImpulse) {}
-};
-

@@ -154,6 +154,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -171,11 +172,13 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="Events.h" />
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="Guns.h" />
     <ClInclude Include="IControllable.h" />
     <ClInclude Include="Init.h" />
     <ClInclude Include="InputSystem.h" />
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LineVisualizer.h" />
+    <ClInclude Include="PhysicalActor2D.h" />
     <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Projectile.h" />
@@ -184,6 +187,8 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="PulseEffectRenderer.h" />
     <ClInclude Include="Services.h" />
     <ClInclude Include="ship.h" />
+    <ClInclude Include="ShipFactory.h" />
+    <ClInclude Include="SimpleShootingAi.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="TextRenderer.h" />

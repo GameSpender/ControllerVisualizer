@@ -1,7 +1,7 @@
 #pragma once
 #include "SpriteRenderer.h"
 #include "InteractionInterfaces.h"
-#include "Physics.h"
+#include "PhysicalActor2D.h"
 #include <glm/glm.hpp>
 #include <vector>
 #include "Actor.h"
@@ -72,7 +72,7 @@ public:
     }
 
     void hitSomething(Transform2D* other) {
-        if (auto hit = dynamic_cast<PhysicsReceiver*>(other)) {
+        if (auto hit = dynamic_cast<PhysicalActor2D*>(other)) {
             hit->applyImpulse(velocity * damage / 100.0f);
         }
         lifetime = 0.0f;

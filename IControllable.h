@@ -7,7 +7,6 @@ public:
 
     virtual ~IControllable() {}
 
-    virtual glm::vec2 getPostion() = 0;
     // Movement
     virtual void setMoveDirection(const glm::vec2 dir) = 0;
 
@@ -20,3 +19,11 @@ public:
     // Dash or similar movement ability
     virtual void dash(bool pressed) = 0;
 };
+
+class IPawnState {
+public:
+    virtual glm::vec2 getPosition() const = 0;
+    virtual glm::vec2 getVelocity() const = 0;
+    virtual ~IPawnState() = default;
+};
+

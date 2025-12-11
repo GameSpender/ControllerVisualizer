@@ -31,6 +31,9 @@
 #include "ship.h"
 #include "BindingGenerator.h"
 #include "CollisionSystem.h"
+#include "Guns.h"
+
+#include "SimpleShootingAi.h"
 
 #include "Services.h"
 
@@ -42,7 +45,7 @@ const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
 
-bool debugWeapon = true;
+bool debugWeapon = false;
 
 
 
@@ -142,13 +145,17 @@ int main()
 
 	Services::assets->loadTexture("grass", "res/grass.png");
 	Services::assets->loadTexture("ship", "res/ship.png");
+    Services::assets->loadTexture("enemy_ship_basic", "res/enemy.png");
 	Services::assets->loadTexture("laser_shot", "res/projectile.png");
 	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
+
 
 	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
 	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
 	Services::sound->loadSound("minigun_shoot", "assets/minigun_shoot.wav");
 	Services::sound->loadSound("minigun_stop", "assets/minigun_stop.wav");
+    Services::sound->loadSound("enemy_shot_basic", "assets/enemy_shoot.wav");
+    Services::sound->loadSound("enemy_death", "assets/enemy_death.wav");
 
  //   assetManager.loadTexture("grass", "res/grass.png");
  //   assetManager.loadTexture("ship", "res/ship.png");
@@ -251,8 +258,10 @@ int main()
 
     PlayerController playerController(&Services::inputSystem->players[0]);
     PlayerController player2Controller(&Services::inputSystem->players[1]);
+	SimpleShootingAi aiController;
 
-	playerController.possess(playerShip.get());
+    //playerController.possess(playerShip.get());
+	aiController.possess(playerShip.get());
 	player2Controller.possess(player2Ship.get());
 
 
@@ -279,6 +288,11 @@ int main()
         
 		playerController.update(dt);
 		player2Controller.update(dt);
+
+		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->velocity);
+		aiController.update(dt);
+
+		//printf("Player 1 Pos: (%.2f, %.2f) Vel: (%.2f, %.2f)\n", playerShip->position.x, playerShip->position.y, playerShip->physics.velocity.x, playerShip->physics.velocity.y);
 
         playerShip->update(dt);
         player2Ship->update(dt);
