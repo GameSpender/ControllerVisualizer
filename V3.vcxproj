@@ -143,19 +143,17 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="passthrough.vert" />
-    <None Include="rect.frag" />
-    <None Include="rect.vert" />
-    <None Include="color.frag" />
-    <None Include="color.vert" />
     <None Include="packages.config" />
+    <None Include="shaders\color.frag" />
+    <None Include="shaders\color.vert" />
+    <None Include="shaders\passthrough.vert" />
+    <None Include="shaders\pulse_effect.frag" />
+    <None Include="shaders\rect.frag" />
+    <None Include="shaders\rect.vert" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <None Include="pulse_effect.frag">
-      <FileType>Document</FileType>
-    </None>
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -164,6 +162,10 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="AssetManager.h" />
     <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
+    <ClInclude Include="Collider.h" />
+    <ClInclude Include="CollisionLayers.h" />
+    <ClInclude Include="CollisionSystem.h" />
+    <ClInclude Include="Director.h" />
     <ClInclude Include="EventBus.h" />
     <ClInclude Include="EventHandler.h" />
     <ClInclude Include="Events.h" />
@@ -175,6 +177,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LineVisualizer.h" />
     <ClInclude Include="PlayerController.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Projectile.h" />
     <ClInclude Include="PostProcessRenderer.h" />
     <ClInclude Include="ProjectileSystem.h" />

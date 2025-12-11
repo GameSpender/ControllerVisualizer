@@ -5,6 +5,7 @@
 #include <vector>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
+#include <glm/gtc/random.hpp>
 
 using namespace glm;
 
@@ -36,10 +37,6 @@ public:
         borderCollision();
 
         markDirty();
-    }
-
-    void Draw(SpriteRenderer& renderer) override {
-        renderer.Draw(texture, getWorldMatrix());
     }
 
     // Check if enemy is hit by a projectile

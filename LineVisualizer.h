@@ -9,6 +9,7 @@ public:
     glm::vec2 end;
     glm::vec3 color;
 
+    LineVisualizer() = default;
     LineVisualizer(glm::vec2 s, glm::vec2 e, glm::vec3 c);
     ~LineVisualizer();
 
@@ -19,8 +20,10 @@ private:
     void setup();
 };
 
-LineVisualizer::LineVisualizer(glm::vec2 s, glm::vec2 e, glm::vec3 c)
-    : start(s), end(e), color(c)
+
+
+LineVisualizer::LineVisualizer(glm::vec2 start, glm::vec2 end, glm::vec3 color)
+    : start(start), end(end), color(color)
 {
     setup();
 }
@@ -58,7 +61,7 @@ void LineVisualizer::Draw(GLuint shader, int screenW, int screenH)
     // Convert world coords → NDC
     auto toNDC = [&](glm::vec2 p) {
         float x = (p.x / (float)screenW) * 2.0f - 1.0f;
-        float y = 1.0f - (p.y / (float)screenH) * 2.0f;
+        float y = (p.y / (float)screenH) * 2.0f - 1.0f;
         return glm::vec2(x, y);
         };
 

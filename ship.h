@@ -11,6 +11,7 @@
 #include <string>
 #include "Events.h"
 #include "Weapon.h"
+#include "Physics.h"
 
 
 #include "IControllable.h"
@@ -27,25 +28,19 @@ class Ship : public Actor2D, public IControllable
 {
 
 public:    
-
+    PhysicsComponent physics;
     // inertia = (vx, vy, angularVelocity)
-    glm::vec2 velocity = glm::vec2(0.0f);
-    float velocityRot = 0.0f;
-    float baseThrust = 400.0f;
+    float baseThrust = 3000.0f;
     float bonusThrustMultiplier = 1.2f;
     float bonusBrakingMultiplier = 2.0f;
-    float rotationThrust = 100.0f;
+    float rotationThrust = 800.0f;
 
-    float PD_p = 45.0f;
-    float PD_d = 9.0f;
+    float PD_p = 800.0f;
+    float PD_d = 120.0f;
 
     float shotSpeed = 3000.0f;
 
     glm::vec2 thrustDir = glm::vec2(0.0f);   // local thrust 
-
-    float mass = 5.0f;
-    float friction = 0.1f;
-    float rotationFriction = 1.0f;
 
     glm::vec2 screenMin = glm::vec2(0.0f);
     glm::vec2 screenMax = glm::vec2(0.0f);
@@ -59,7 +54,11 @@ public:
 
     bool destroyed = false;
 
-    Ship() = default;
+    Ship() {
+        physics.friction = 0.1f;
+        physics.angularFriction = 1.0f;
+        physics.mass = 10.0f;
+    }
     // -----------------------------------------
     //              MAIN UPDATE
     // -----------------------------------------
@@ -82,12 +81,7 @@ public:
         
         float thrustIntensity = length(thrust) + rotThrust;
 
-        //produceParticles(1.0f, dt);
-        // Movement integration
-        velocity -= velocity * friction * delta;
-
-        // Rotation integration
-        velocityRot -= velocityRot * rotationFriction * delta;
+        physics.integrate(*this, dt);
 
         if(screenMin != screenMax)
             borderCollision(screenMin, screenMax, 0.5f, -0.06f);
@@ -209,8 +203,7 @@ public:
 
     void respawn(glm::vec2 pos, float rot = 0.0f) {
         position = pos;
-        velocity = vec2(0);
-        rotation = rot;
+        
         setRepaired();
         markDirty();
     }
@@ -221,6 +214,14 @@ public:
         addChild(hp);
 
         actionMap[fireAction].push_back(hp);
+    }
+
+
+    void applyImpulse(const vec2& impulse) override {
+        physics.applyImpulse(impulse);
+    }
+    void applyAngularImpulse(float angularImpulse) override {
+        physics.applyAngularImpulse(angularImpulse);
     }
 
 private:
@@ -237,7 +238,7 @@ private:
         vec2 forwardDir = forward();                  // ship's facing
         vec2 thrustWorld = direction * baseThrust;    // base thrust in world space
 
-        float speed = length(velocity);
+        float speed = length(physics.velocity);
 
         float totalMultiplier = 1.0f;
 
@@ -249,7 +250,7 @@ private:
         // ----- Braking bonus -----
         if (speed > 0.001f)
         {
-            vec2 velDir = normalize(velocity);
+            vec2 velDir = normalize(physics.velocity);
             float brakingAlignment = dot(thrustDir, -velDir); // 1 = against velocity
             if (brakingAlignment > 0.0f)
                 totalMultiplier += brakingAlignment * bonusBrakingMultiplier * glm::max(0.0f, forwardAlignment);
@@ -259,7 +260,7 @@ private:
 
 
         // Apply final thrust
-        velocity += finalThrust * delta;
+        physics.applyForce(finalThrust, delta);
         return finalThrust;
     }
 
@@ -292,7 +293,7 @@ private:
         // 3. PD Controller
         // ----------------------
 
-        float torque = PD_p * angleDiff - PD_d * velocityRot; // P-D control
+        float torque = PD_p * angleDiff - PD_d * physics.angularVelocity; // P-D control
 
         // Optional clamp to prevent extreme angular acceleration
         torque = glm::clamp(torque, -rotationThrust, rotationThrust);
@@ -300,53 +301,61 @@ private:
         // ----------------------
         // 4. Apply torque
         // ----------------------
-        velocityRot += torque * delta;
+        physics.applyTorque(torque, delta);
         return torque;
     }
 
-    // Call this inside update() after moving the ship
-    void borderCollision(const glm::vec2& screenMin, const glm::vec2& screenMax, float restitution = 0.5f, float spinFactor = 0.3f)
+    // Call inside Ship::update() AFTER physics.integrate()
+    void borderCollision(const glm::vec2& screenMin,
+        const glm::vec2& screenMax,
+        float restitution = 0.5f,
+        float spinFactor = 0.3f)
     {
-        // Check X axis
+        // X-axis collision
         if (position.x < screenMin.x)
         {
-            position.x = screenMin.x; // clamp to border
-            if (velocity.x < 0)
+            position.x = screenMin.x;
+
+            if (physics.velocity.x < 0.0f)
             {
-                velocity.x = -velocity.x * restitution; // bounce
-                velocityRot += velocity.y * spinFactor;   // spin based on perpendicular velocity
+                physics.velocity.x = -physics.velocity.x * restitution;
+                physics.angularVelocity += physics.velocity.y * spinFactor;
             }
         }
         else if (position.x > screenMax.x)
         {
             position.x = screenMax.x;
-            if (velocity.x > 0)
+
+            if (physics.velocity.x > 0.0f)
             {
-                velocity.x = -velocity.x * restitution;
-                velocityRot -= velocity.y * spinFactor;
+                physics.velocity.x = -physics.velocity.x * restitution;
+                physics.angularVelocity -= physics.velocity.y * spinFactor;
             }
         }
 
-        // Check Y axis
+        // Y-axis collision
         if (position.y < screenMin.y)
         {
             position.y = screenMin.y;
-            if (velocity.y < 0)
+
+            if (physics.velocity.y < 0.0f)
             {
-                velocity.y = -velocity.y * restitution;
-                velocityRot -= velocity.x * spinFactor;
+                physics.velocity.y = -physics.velocity.y * restitution;
+                physics.angularVelocity -= physics.velocity.x * spinFactor;
             }
         }
         else if (position.y > screenMax.y)
         {
             position.y = screenMax.y;
-            if (velocity.y > 0)
+
+            if (physics.velocity.y > 0.0f)
             {
-                velocity.y = -velocity.y * restitution;
-                velocityRot += velocity.x * spinFactor;
+                physics.velocity.y = -physics.velocity.y * restitution;
+                physics.angularVelocity += physics.velocity.x * spinFactor;
             }
         }
     }
+
 
     void produceParticles(float thrust, double dt) {
         if (thrust < 0.001f)
@@ -372,7 +381,7 @@ private:
             vec2 spawnPos = position + offset;
 
             // Particle velocity opposite to ship's forward + some randomness
-            vec2 particleVel = -forward() * (10.0f + thrust * 100.0f) + velocity;
+            vec2 particleVel = -forward() * (10.0f + thrust * 100.0f) + physics.velocity;
             particleVel += vec2(
                 (float(rand()) / RAND_MAX - 0.5f) * 10.0f, // x random jitter
                 (float(rand()) / RAND_MAX - 0.5f) * 10.0f  // y random jitter

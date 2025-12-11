@@ -27,8 +27,10 @@
 #include "ProjectileSystem.h"
 #include "PlayerController.h"
 
+#include "GamepadObject.h"
 #include "ship.h"
 #include "BindingGenerator.h"
+#include "CollisionSystem.h"
 
 #include "Services.h"
 
@@ -75,6 +77,7 @@ int main()
 
     unsigned int rectShader = createShader("shaders/rect.vert", "shaders/rect.frag");
 	unsigned int pulseShader = createShader("shaders/passthrough.vert", "shaders/pulse_effect.frag");
+    unsigned int debugShader = createShader("shaders/color.vert", "shaders/color.frag");
 
     glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -1.0f, 1.0f);
     glUseProgram(rectShader);
@@ -192,9 +195,24 @@ int main()
     playerShip->respawn(vec2(500, 500));
     playerShip->scale = vec2(50.0f);
 
+    std::shared_ptr<Collider2D> shipCollider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
+    shipCollider->mask = CollisionLayer::All;
+    shipCollider->layer = CollisionLayer::Player;
+    shipCollider->scale = vec2(0.8f);
+    collisionSystem.addCollider(shipCollider);
+    playerShip->addChild(shipCollider);
+
+    shipCollider->onCollisionEnter = [](Collider2D*) {
+        std::cout << "Ship 1 collided with!\n";
+        };
+    shipCollider->onCollisionExit = [](Collider2D*) {
+        std::cout << "Ship 1 stopped being collided with!\n";
+        };
+
+
     // Create primary hardpoint and attach a weapon
     auto primaryHP = std::make_shared<Hardpoint>();
-	primaryHP->position = vec2(0, -1.0f);
+	primaryHP->position = vec2(0, -0.9f);
     auto laserGun = std::make_shared<LaserGun>();
     primaryHP->attachWeapon(laserGun);
 
@@ -207,6 +225,13 @@ int main()
     player2Ship->screenMax = vec2(screenWidth, screenHeight);
     player2Ship->respawn(vec2(500, 500));
     player2Ship->scale = vec2(50.0f);
+
+    std::shared_ptr<Collider2D> ship2Collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
+    ship2Collider->mask = CollisionLayer::All;
+    ship2Collider->layer = CollisionLayer::Player;
+    ship2Collider->scale = vec2(0.8f);
+    collisionSystem.addCollider(ship2Collider);
+    player2Ship->addChild(ship2Collider);
 
     // Create primary hardpoint and attach a weapon
     auto primaryHP2 = std::make_shared<Hardpoint>();
@@ -225,12 +250,17 @@ int main()
 	player2Controller.possess(player2Ship.get());
 
 
+    std::shared_ptr<GamepadObject> gamepadVisualizer = std::make_shared<GamepadObject>();
+    gamepadVisualizer->initHiearchy();
+    gamepadVisualizer->position = vec2(screenWidth / 2, screenHeight * 0.3);
+
     int framerateCap = 75;
     double frameInterval = 1.0f / framerateCap;
     double nextFrameTime = 0.0f;
 
     double lastTime = 0.0f;
 
+    LineVisualizer line(vec2(0), vec2(0), vec3(255, 255, 0));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -250,6 +280,13 @@ int main()
         Services::projectiles->update(dt);
 
         Services::eventHandler->processEvents();
+        gamepadInput.updateFromGLFW(gamepad.id);
+        gamepadVisualizer->updateFromInput(gamepadInput);
+        gamepadVisualizer->update(dt);
+
+        collisionSystem.update();
+
+        eventHandler.processEvents();
 
         Services::eventBus->clear();
 
@@ -258,12 +295,8 @@ int main()
 
 
 
-		//directionLine.start = ship->getWorldPosition();
-		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
-
-
         double currentTime = glfwGetTime();
-        if (nextFrameTime < currentTime) {
+        if (nextFrameTime <= currentTime) {
             double renderTime = currentTime;
 
             //glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
@@ -277,7 +310,7 @@ int main()
 
             {
                 auto size = vec2(100, 100);
-                auto pos = vec2(screenWidth - 60, 30);
+                auto pos = vec2(screenWidth - 60, 60);
                 spriteRenderer.Draw(signatureTexture, pos, size);
             }
             
@@ -288,6 +321,12 @@ int main()
 
             Services::projectiles->render(spriteRenderer, *Services::assets);
             
+            if (debugWeapon) {
+                line.start = laserMinigun->getWorldPosition();
+                line.end = line.start + laserMinigun->forwardWorld() * 1000.0f;
+                line.Draw(debugShader, screenWidth, screenHeight);
+            }
+
 
             //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
