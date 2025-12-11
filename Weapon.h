@@ -4,10 +4,13 @@
 #include "Events.h"
 #include <random>
 
+#include "Services.h"
+#include "EventBus.h"
+#include "ProjectileSystem.h"
+
 
 class Weapon : public Actor2D{
 protected:
-    ProjectileSystem* projectileSystem;
 	
 public:
 	double shotInterval;
@@ -16,12 +19,6 @@ public:
     float damage;
     int team;
     float deviation;
-
-    void init(ProjectileSystem* projectileSystem, EventBus* eventBus) {
-        this->projectileSystem = projectileSystem;
-        events = eventBus;
-    }
-
 
     virtual void startFiring() {};
     virtual void stopFiring() {};
@@ -103,9 +100,9 @@ public:
             LaserProjectile projectile(getWorldPosition(), forwardWorld() * shotSpeed, lifetime, damage, team);
             projectile.scale = getWorldScale() / 1.5f;
 
-            projectileSystem->addProjectile<LaserProjectile>(projectile);
+            Services::projectiles->addProjectile<LaserProjectile>(projectile);
 
-            events->emit(ShootEvent{
+            Services::eventBus->emit(ShootEvent{
                 .position = getWorldPosition(),
                 .direction = forwardWorld(),
                 .projectileType = "laser_shot",
@@ -150,13 +147,14 @@ public:
         firing = true;
 
         // Start spool sound if not already and gun not overheated
-        if (!spoolSoundPlaying && events && !overheated) {
+        if (!spoolSoundPlaying && !overheated) {
             float startTime = spool - spoolTimeRemaining; // 0 = unspooled, 1 = fully spooled
-            events->emit(SoundEvent{
-                .owner = &spoolSoundPlaying,
-                .soundName = "minigun_spool",
-                .startTime = startTime
-                });
+			if (Services::eventBus)
+                Services::eventBus->emit(SoundEvent{
+                    .owner = &spoolSoundPlaying,
+                    .soundName = "minigun_spool",
+                    .startTime = startTime
+                    });
             spoolSoundPlaying = true;
         }
     }
@@ -165,20 +163,20 @@ public:
         firing = false;
 
         // Stop spool sound
-        if (spoolSoundPlaying && events) {
-            events->emit(SoundEvent{
+        if (spoolSoundPlaying && Services::eventBus) {
+            Services::eventBus->emit(SoundEvent{
                 .owner = &spoolSoundPlaying,
                 .soundName = "minigun_spool",
                 .stop = true
             });
             spoolSoundPlaying = false;
         }
-        if (shootSoundPlaying && events) {
-            events->emit(SoundEvent{
+        if (shootSoundPlaying && Services::eventBus) {
+            Services::eventBus->emit(SoundEvent{
                 .owner = &stoppedFiring,
                 .soundName = "minigun_stop"
             });
-            events->emit(SoundEvent{
+            Services::eventBus->emit(SoundEvent{
                 .owner = &shootSoundPlaying,
                 .soundName = "minigun_shoot",
                 .stop = true
@@ -204,8 +202,8 @@ public:
             spoolTimeRemaining = std::min(spool, spoolTimeRemaining + spoolDown * (float)dt);
 
             // Stop spool sound if it was playing
-            if (spoolSoundPlaying && events) {
-                events->emit(SoundEvent{
+            if (spoolSoundPlaying && Services::eventBus) {
+                Services::eventBus->emit(SoundEvent{
                     .owner = &spoolSoundPlaying,
                     .soundName = "minigun_spool",
                     .stop = true
@@ -225,16 +223,16 @@ public:
         }
 
         // fully spooled, make funny sounds
-        if (spoolSoundPlaying && events) {
-            events->emit(SoundEvent{
+        if (spoolSoundPlaying && Services::eventBus) {
+            Services::eventBus->emit(SoundEvent{
                 .owner = &spoolSoundPlaying,
                 .soundName = "minigun_spool",
                 .stop = true
                 });
             spoolSoundPlaying = false;
         }
-        if (!shootSoundPlaying && events) {
-            events->emit(SoundEvent{
+        if (!shootSoundPlaying && Services::eventBus) {
+            Services::eventBus->emit(SoundEvent{
             .owner = &shootSoundPlaying,
             .soundName = "minigun_shoot",
             .loop = true
@@ -247,8 +245,8 @@ public:
             overheated = true;
 
             // Stop spool sound
-            if (spoolSoundPlaying && events) {
-                events->emit(SoundEvent{
+            if (spoolSoundPlaying && Services::eventBus) {
+                Services::eventBus->emit(SoundEvent{
                     .owner = &spoolSoundPlaying,
                     .soundName = "minigun_spool",
                     .stop = true
@@ -256,12 +254,12 @@ public:
                 spoolSoundPlaying = false;
 
             }
-            if (shootSoundPlaying && events) {
-                events->emit(SoundEvent{
+            if (shootSoundPlaying && Services::eventBus) {
+                Services::eventBus->emit(SoundEvent{
                     .owner = &stoppedFiring,
                     .soundName = "minigun_stop"
                     });
-                events->emit(SoundEvent{
+                Services::eventBus->emit(SoundEvent{
                 .owner = &shootSoundPlaying,
                 .soundName = "minigun_shoot",
                 .stop = true
@@ -304,18 +302,8 @@ public:
             LaserProjectile projectile(getWorldPosition(), deviatedDir * shotSpeed, lifetime, damage, team);
             projectile.scale = getWorldScale();
             projectile.spriteName = "bullet_shot";
-            projectileSystem->addProjectile<LaserProjectile>(projectile);
+            Services::projectiles->addProjectile<LaserProjectile>(projectile);
 
-            // Emit shooting event
-            /*if (events) {
-                events->emit(ShootEvent{
-                    .position = getWorldPosition(),
-                    .direction = forwardWorld(),
-                    .projectileType = "laser_shot",
-                    .soundName = "laser_shot",
-                    .effectName = "laser_shot"
-                    });
-            }*/
         }
     }
 };

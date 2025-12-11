@@ -3,37 +3,33 @@
 #include "Events.h"
 #include "SoundManager.h"
 #include "ProjectileSystem.h"
+#include "Services.h"
 
 
 class EventHandler {
-	SoundManager* soundManager;
-	ProjectileSystem* projectileSystem;
-	EventBus* bus;
+
 public:
 
-	EventHandler(EventBus* bus) : bus(bus) {}
-
-	void init(SoundManager* soundMan, ProjectileSystem* proj) {
-		soundManager = soundMan;
-		projectileSystem = proj;
-	}
+	EventHandler(){}
 
 
 	void processEvents() {
-		bus->process<ShootEvent>([&](const ShootEvent shot) {
-			if (!soundManager) return;
+		if (!Services::eventBus) return;
+
+		Services::eventBus->process<ShootEvent>([&](const ShootEvent shot) {
+			if (!Services::sound) return;
 			if (shot.projectileType == "laser_shot") {
-				soundManager->play(shot.soundName);
+				Services::sound->play(shot.soundName);
 			}
 		});
 
-		bus->process<SoundEvent>([&](const SoundEvent sound) {
-			if (!soundManager) return;
+		Services::eventBus->process<SoundEvent>([&](const SoundEvent sound) {
+			if (!Services::sound) return;
 			if (sound.stop) {
-				soundManager->stopForObject(sound.owner);
+				Services::sound->stopForObject(sound.owner);
 			}
 			else {
-				soundManager->playForObject(sound.owner, sound.soundName, sound.volume, sound.loop, sound.startTime);
+				Services::sound->playForObject(sound.owner, sound.soundName, sound.volume, sound.loop, sound.startTime);
 			}
 				
 		});

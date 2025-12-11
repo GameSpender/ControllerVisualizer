@@ -28,8 +28,8 @@ void bindKeyboardAndMouse(InputDevice keyboard, InputDevice mouse, PlayerInput& 
     InputBinding mouseRight{ .device = mouse, .code = GLFW_MOUSE_BUTTON_2 };
     InputBinding mouseLeft{ .device = mouse, .code = GLFW_MOUSE_BUTTON_1 };
 
-    playerInput.bindings[Action::Aim].push_back(mouseRight);
-    playerInput.bindings[Action::Shoot].push_back(mouseLeft);
+    playerInput.bindings[Action::SecondaryAbility].push_back(mouseRight);
+    playerInput.bindings[Action::PrimaryAbility].push_back(mouseLeft);
 }
 
 
@@ -51,5 +51,7 @@ void bindGamepad(InputDevice gamepad, PlayerInput& playerInput) {
 
     // Right bumper: shoot
     InputBinding rightBumper{ .device = gamepad, .code = GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER };
-    playerInput.bindings[Action::Shoot].push_back(rightBumper);
+	InputBinding leftBumper{ .device = gamepad, .code = GLFW_GAMEPAD_BUTTON_LEFT_BUMPER };
+    playerInput.bindings[Action::PrimaryAbility].push_back(rightBumper);
+	playerInput.bindings[Action::SecondaryAbility].push_back(leftBumper);
 }

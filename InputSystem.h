@@ -10,14 +10,12 @@ enum class Action {
     AimHorizontal,
     AimVertical,
     Aim,
-    MoveUp,
-    MoveDown,
-    MoveLeft,
-    MoveRight,
-    Shoot,
-    SwitchWeapon,
-    Pause,
-    // ...
+    PrimaryAbility,
+    SecondaryAbility,
+	TertiaryAbility,
+	QuaternaryAbility,
+    Dash,
+
 };
 
 enum class DeviceType { Keyboard, Mouse, Gamepad };

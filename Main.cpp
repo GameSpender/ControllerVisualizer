@@ -22,9 +22,15 @@
 #include "AssetManager.h"
 #include "SoundManager.h"
 #include "EventHandler.h"
+#include "InputSystem.h"
+#include "EventBus.h"
+#include "ProjectileSystem.h"
+#include "PlayerController.h"
 
 #include "ship.h"
 #include "BindingGenerator.h"
+
+#include "Services.h"
 
 using namespace glm;
 
@@ -34,32 +40,6 @@ const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
 
-
-
-class TestActor : public Actor2D {
-
-
-public: 
-    float speed = 100.0f;
-
-    TestActor(std::string spriteName){
-        this->spriteName = spriteName;
-    }
-
-    void update(double dt) override {
-        if (hasInput()) {
-            float movement = input->getAnalog(Action::MoveHorizontal);
-            vec2 velocity(speed * movement * dt, 0);
-            position += velocity;
-
-            if (hasEventBus())
-                events->emit(MoveEvent{ position, velocity, 1.0f });
-
-            markDirty();
-        }
-    }
-
-};
 
 
 
@@ -130,35 +110,47 @@ int main()
     
     // ----------------- new stuff -------------------
 
-    InputSystem inputSystem;
-    EventBus eventBus;
-    AssetManager assetManager;
-    SoundManager soundManager;
-    EventHandler eventHandler(&eventBus);
-    ProjectileSystem projectileSystem;
-
     PlayerInput playerInput;
     PlayerInput player2Input;
+
 
     InputDevice keyboard;
     InputDevice gamepad;
     InputDevice gamepad2;
     InputDevice mouse;
     
+    Services::init(
+        new InputSystem,
+        new EventBus,
+        new AssetManager,
+		new SoundManager,
+        new EventHandler,
+		new ProjectileSystem
+    );
+
 
     // ----------------- new stuff -------------------
 
-    assetManager.loadTexture("grass", "res/grass.png");
-    assetManager.loadTexture("ship", "res/ship.png");
-    assetManager.loadTexture("laser_shot", "res/projectile.png");
-    assetManager.loadTexture("bullet_shot", "res/bullet.png");
+	Services::assets->loadTexture("grass", "res/grass.png");
+	Services::assets->loadTexture("ship", "res/ship.png");
+	Services::assets->loadTexture("laser_shot", "res/projectile.png");
+	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
 
-    soundManager.loadSound("laser_shot", "assets/shoot.wav");
-    soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
-    soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
-	soundManager.loadSound("minigun_stop", "assets/minigun_stop.wav");
+	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
+	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
+	Services::sound->loadSound("minigun_shoot", "assets/minigun_shoot.wav");
+	Services::sound->loadSound("minigun_stop", "assets/minigun_stop.wav");
 
-    eventHandler.init(&soundManager, &projectileSystem);
+ //   assetManager.loadTexture("grass", "res/grass.png");
+ //   assetManager.loadTexture("ship", "res/ship.png");
+ //   assetManager.loadTexture("laser_shot", "res/projectile.png");
+ //   assetManager.loadTexture("bullet_shot", "res/bullet.png");
+
+ //   soundManager.loadSound("laser_shot", "assets/shoot.wav");
+ //   soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
+ //   soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
+	//soundManager.loadSound("minigun_stop", "assets/minigun_stop.wav");
+
 
     keyboard = {
         .type = DeviceType::Keyboard,
@@ -182,22 +174,21 @@ int main()
 
     bindGamepad(gamepad, player2Input);
 
-    bindGamepad(gamepad2, player2Input);
+    //bindGamepad(gamepad2, player2Input);
 
     
 
-    inputSystem.devices.push_back(keyboard);
-    inputSystem.devices.push_back(mouse);
-    inputSystem.devices.push_back(gamepad);
-    inputSystem.devices.push_back(gamepad2);
-    inputSystem.players.push_back(playerInput); 
-    inputSystem.players.push_back(player2Input);
+	Services::inputSystem->devices.push_back(keyboard);
+	Services::inputSystem->devices.push_back(mouse);
+	Services::inputSystem->devices.push_back(gamepad);
+	Services::inputSystem->players.push_back(playerInput);
+	Services::inputSystem->players.push_back(player2Input);
+
 
 
     std::shared_ptr<Ship> playerShip = std::make_shared<Ship>();
     playerShip->spriteName = "ship";
     playerShip->screenMax = vec2(screenWidth, screenHeight);
-    playerShip->init(&inputSystem.players.front(), &eventBus);
     playerShip->respawn(vec2(500, 500));
     playerShip->scale = vec2(50.0f);
 
@@ -205,17 +196,15 @@ int main()
     auto primaryHP = std::make_shared<Hardpoint>();
 	primaryHP->position = vec2(0, -1.0f);
     auto laserGun = std::make_shared<LaserGun>();
-    laserGun->init(&projectileSystem, &eventBus);
     primaryHP->attachWeapon(laserGun);
 
     // Add hardpoint to ship and bind to action
-    playerShip->addHardpoint(primaryHP, Action::Shoot);
+    playerShip->addHardpoint(primaryHP, 0);
 
 
     std::shared_ptr<Ship> player2Ship = std::make_shared<Ship>();
     player2Ship->spriteName = "ship";
     player2Ship->screenMax = vec2(screenWidth, screenHeight);
-    player2Ship->init(&inputSystem.players[1], &eventBus);
     player2Ship->respawn(vec2(500, 500));
     player2Ship->scale = vec2(50.0f);
 
@@ -223,16 +212,17 @@ int main()
     auto primaryHP2 = std::make_shared<Hardpoint>();
 	primaryHP2->position = vec2(0, -1.0f);
     auto laserMinigun = std::make_shared<LaserMinigun>();
-    laserMinigun->init(&projectileSystem, &eventBus);
     primaryHP2->attachWeapon(laserMinigun);
 
     // Add hardpoint to ship and bind to action
-    player2Ship->addHardpoint(primaryHP2, Action::Shoot);
+    player2Ship->addHardpoint(primaryHP2, 0);
 
-    TestActor testActor("grass");
-    testActor.init(&inputSystem.players.front(), &eventBus);
-    testActor.position = vec2(100, 100);
-    testActor.scale = vec2(50);
+
+    PlayerController playerController(&Services::inputSystem->players[0]);
+    PlayerController player2Controller(&Services::inputSystem->players[1]);
+
+	playerController.possess(playerShip.get());
+	player2Controller.possess(player2Ship.get());
 
 
     int framerateCap = 75;
@@ -249,17 +239,19 @@ int main()
         lastTime = time;
 
 
-        inputSystem.update();
+        Services::inputSystem->update();
         
-        testActor.update(dt);
+		playerController.update(dt);
+		player2Controller.update(dt);
+
         playerShip->update(dt);
         player2Ship->update(dt);
 
-        projectileSystem.update(dt);
+        Services::projectiles->update(dt);
 
-        eventHandler.processEvents();
+        Services::eventHandler->processEvents();
 
-        eventBus.clear();
+        Services::eventBus->clear();
 
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
@@ -289,13 +281,12 @@ int main()
                 spriteRenderer.Draw(signatureTexture, pos, size);
             }
             
-            spriteRenderer.Draw(assetManager.getTexture(testActor.spriteName)->id, testActor.getWorldMatrix());
 
-            spriteRenderer.Draw(assetManager.getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
+            spriteRenderer.Draw(Services::assets->getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
 
-            spriteRenderer.Draw(assetManager.getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
+            spriteRenderer.Draw(Services::assets->getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
 
-            projectileSystem.render(spriteRenderer, assetManager);
+            Services::projectiles->render(spriteRenderer, *Services::assets);
             
 
             //glBindFramebuffer(GL_FRAMEBUFFER, 0);

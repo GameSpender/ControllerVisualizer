@@ -6,17 +6,24 @@
 #include "InteractionInterfaces.h"
 #include "Projectile.h"
 #include "irrKlang/irrKlang.h"
-#include "EventBus.h"
+
 #include "Actor.h"
 #include <string>
 #include "Events.h"
 #include "Weapon.h"
 
 
+#include "IControllable.h"
+#include "Services.h"
+#include "SoundManager.h"
+#include "EventBus.h"
+
+
+
 using namespace glm;
 
 
-class Ship : public Actor2D
+class Ship : public Actor2D, public IControllable
 {
 
 public:    
@@ -48,7 +55,7 @@ public:
 
     std::vector<std::shared_ptr<Hardpoint>> hardpoints;
 
-    std::unordered_map<Action, std::vector<std::shared_ptr<Hardpoint>>> actionMap;
+    std::unordered_map<int, std::vector<std::shared_ptr<Hardpoint>>> actionMap;
 
     bool destroyed = false;
 
@@ -65,7 +72,10 @@ public:
 
         
 
-        handleInput(dt);
+        
+        for (auto hp : hardpoints) {
+            hp->update(dt);
+		}
 
         vec2 thrust = applyThrust(thrustDir, dt);
         float rotThrust = applyRotationThrust(targetRot, thrustDir, dt);
@@ -104,38 +114,78 @@ public:
             targetRot = vec2(0.0f);
     }
 
-    vec2 getRelativeMouse() {
-        if (hasInput()) {
-            vec2 mousePos = input->getPosition(Action::MousePositionHorizontal, Action::MousePositionVertical);
-            vec2 relative = mousePos - position;
-            return relative;
-        }
-        return vec2(0);
+	// IControllable implementation
+    vec2 getPostion() override {
+		return getWorldPosition();
     }
 
-    void handleInput(double dt) {
-        if (hasInput()) {
-            setThrust(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));
+    void setMoveDirection(const glm::vec2 dir) override {
+		setThrust(dir);
+    }
 
-            vec2 aimDir = input->getPosition(Action::AimHorizontal, Action::AimVertical);
-            if (input->isDown(Action::Aim)) {
-                aimDir += getRelativeMouse();
-            }
-            setDirection(aimDir);
+    void setAimDirection(const glm::vec2 dir) override {
+		setDirection(dir);
+    }
 
-            bool click = input->isPressed(Action::Shoot);
+    void useAbility(int index, bool pressed) override {
+        if (index < 0 || index >= 4) return; // assuming abilities 1-4
 
-            // Update all hardpoints based on the mapped input
+
+        // Map index → hardpoints or other abilities
+        if (index < hardpoints.size()) {
             for (auto& [action, hpList] : actionMap) {
-                bool firing = input->isDown(action);
+                bool firing = pressed;
                 for (auto& hp : hpList) {
                     if (firing) hp->startFiring();
                     else hp->stopFiring();
-                    hp->update(dt);
                 }
             }
         }
     }
+
+    void dash(bool pressed) override {
+        if (pressed) {
+            
+            velocity += thrustDir * 2000.0f; // example dash impulse
+        }
+    }
+
+	// End of IControllable implementation
+
+
+
+    //vec2 getRelativeMouse() {
+    //    if (hasInput()) {
+    //        vec2 mousePos = input->getPosition(Action::MousePositionHorizontal, Action::MousePositionVertical);
+    //        vec2 relative = mousePos - position;
+    //        return relative;
+    //    }
+    //    return vec2(0);
+    //}
+
+    //void handleInput(double dt) {
+    //    if (hasInput()) {
+    //        setThrust(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));
+
+    //        vec2 aimDir = input->getPosition(Action::AimHorizontal, Action::AimVertical);
+    //        if (input->isDown(Action::Aim)) {
+    //            aimDir += getRelativeMouse();
+    //        }
+    //        setDirection(aimDir);
+
+    //        bool click = input->isPressed(Action::Shoot);
+
+    //        // Update all hardpoints based on the mapped input
+    //        for (auto& [action, hpList] : actionMap) {
+    //            bool firing = input->isDown(action);
+    //            for (auto& hp : hpList) {
+    //                if (firing) hp->startFiring();
+    //                else hp->stopFiring();
+    //                hp->update(dt);
+    //            }
+    //        }
+    //    }
+    //}
 
 
     bool checkHit(const Projectile& proj) {
@@ -166,7 +216,7 @@ public:
     }
 
 
-    void addHardpoint(const std::shared_ptr<Hardpoint>& hp, Action fireAction) {
+    void addHardpoint(const std::shared_ptr<Hardpoint>& hp, int fireAction) {
         hardpoints.push_back(hp);
         addChild(hp);
 
