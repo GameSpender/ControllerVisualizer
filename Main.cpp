@@ -34,6 +34,7 @@
 #include "Guns.h"
 
 #include "SimpleShootingAi.h"
+#include "ShipFactory.h"
 
 #include "Services.h"
 
@@ -120,6 +121,7 @@ int main()
 
     PlayerInput playerInput;
     PlayerInput player2Input;
+    ShipFactory factory;
 
 
     InputDevice keyboard;
@@ -255,15 +257,16 @@ int main()
     // Add hardpoint to ship and bind to action
     player2Ship->addHardpoint(primaryHP2, 0);
 
+    auto enemyship = factory.spawnEnemy(vec2(1000, 700), 0);
 
     PlayerController playerController(&Services::inputSystem->players[0]);
     PlayerController player2Controller(&Services::inputSystem->players[1]);
 	SimpleShootingAi aiController;
 
     //playerController.possess(playerShip.get());
-	aiController.possess(playerShip.get());
+	playerController.possess(playerShip.get());
 	player2Controller.possess(player2Ship.get());
-
+    aiController.possess(enemyship.get());
 
     std::shared_ptr<GamepadObject> gamepadVisualizer = std::make_shared<GamepadObject>();
     gamepadVisualizer->initHiearchy();
@@ -296,6 +299,7 @@ int main()
 
         playerShip->update(dt);
         player2Ship->update(dt);
+        enemyship->update(dt);
 
         Services::projectiles->update(dt);
 
@@ -338,6 +342,8 @@ int main()
             spriteRenderer.Draw(Services::assets->getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
 
             spriteRenderer.Draw(Services::assets->getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
+
+            spriteRenderer.Draw(Services::assets->getTexture(enemyship->spriteName)->id, enemyship->getWorldMatrix());
 
             Services::projectiles->render(spriteRenderer, *Services::assets);
             
