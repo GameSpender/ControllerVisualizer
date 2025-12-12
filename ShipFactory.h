@@ -42,16 +42,20 @@ public:
     static std::shared_ptr<Ship> spawnEnemy(
         const glm::vec2& position,
         float rotation = 0.0f,
-        const glm::vec2& scale = glm::vec2(70.0f),
+        const glm::vec2& scale = glm::vec2(50.0f),
         const std::string& spriteName = "enemy_ship_basic"
     ) {
-        auto enemyShip = spawnShip(position, rotation, scale, spriteName, CollisionLayer::Enemy, 1.0f);
+        auto enemyShip = spawnShip(position, rotation, scale, spriteName, CollisionLayer::Enemy, 0.9f);
+
+        enemyShip->getComponent<HealthComponent>()->setTeam(1);
 
         // --- Add a single hardpoint with EnemyGun bound to action 0 ---
         auto gun = std::make_shared<EnemyGun>();
         auto hardpoint = std::make_shared<Hardpoint>();
+        hardpoint->position = vec2(0, -1.0f);
         hardpoint->attachWeapon(gun);
         enemyShip->addHardpoint(hardpoint, 0);
+
 
         return enemyShip;
     }

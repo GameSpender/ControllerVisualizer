@@ -10,10 +10,14 @@
 #include "CollisionSystem.h"
 #include "Services.h"
 
+#include "TeamRules.h"
+#include "HealthComponent.h"
+
 using namespace glm;
 
 class Projectile : public Actor2D{
 public:
+    Transform2D* owner = nullptr; // The originator of the projectile
     vec2 velocity;         // world-space velocity
     float lifetime; // seconds
     int team;
@@ -54,9 +58,10 @@ public:
 class LaserProjectile : public Projectile {
 public:
     float damage = 0.0f;
+    float knockbackScale = 1.0f / 100.0f;
 
     // Constructor with all needed parameters
-    LaserProjectile(vec2 startPos, vec2 velocity, float lifetime, float damage, int team)
+    LaserProjectile(vec2 startPos, vec2 velocity, float lifetime, float damage, int team, Transform2D* owner = nullptr)
     {
         this->position = startPos;  // inherited from Transform2D
         this->velocity = velocity;
@@ -64,6 +69,7 @@ public:
         this->lifetime = lifetime;
         this->damage = damage;
         this->team = team;
+        this->owner = owner; // assign the owner
         this->spriteName = "laser_shot"; // optional, can be set externally
     }
      
@@ -72,10 +78,21 @@ public:
     }
 
     void hitSomething(Transform2D* other) {
-        if (auto hit = dynamic_cast<PhysicalActor2D*>(other)) {
-            hit->applyImpulse(velocity * damage / 100.0f);
+
+        if (auto phys = dynamic_cast<PhysicalActor2D*>(other)) {
+            phys->applyImpulse(velocity * damage * knockbackScale);
         }
-        lifetime = 0.0f;
+        
+        if (auto dmg = dynamic_cast<Actor2D*>(other)->getComponent<HealthComponent>()) {
+
+            // Team filter
+            if (TeamRules::canDamage(this->team, dmg->team)) {
+
+                dmg->applyDamage(damage, this->owner);
+            }
+        }
+
+        lifetime = 0;
     }
 
     // Update moves the projectile and decreases lifetime

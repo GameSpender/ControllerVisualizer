@@ -47,6 +47,7 @@ int screenWidth = 800;
 int screenHeight = 800;
 
 bool debugWeapon = false;
+bool debugDamage = false;
 
 
 
@@ -150,13 +151,14 @@ int main()
     Services::assets->loadTexture("enemy_ship_basic", "res/enemy.png");
 	Services::assets->loadTexture("laser_shot", "res/projectile.png");
 	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
+	Services::assets->loadTexture("enemy_shot", "res/enemy_projectile.png");
 
 
 	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
 	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
 	Services::sound->loadSound("minigun_shoot", "assets/minigun_shoot.wav");
 	Services::sound->loadSound("minigun_stop", "assets/minigun_stop.wav");
-    Services::sound->loadSound("enemy_shot_basic", "assets/enemy_shoot.wav");
+    Services::sound->loadSound("enemy_shot", "assets/enemy_shoot.wav");
     Services::sound->loadSound("enemy_death", "assets/enemy_death.wav");
 
  //   assetManager.loadTexture("grass", "res/grass.png");
@@ -278,6 +280,21 @@ int main()
 
     double lastTime = 0.0f;
 
+    // Somewhere in initialization, after the EventBus is ready:
+    if (Services::eventBus) {
+        Services::eventBus->subscribe<DamageEvent>([](const DamageEvent& e) {
+            printf("Damage dealt: %.2f to target %p (team %d)\n", e.amount, e.target, e.team);
+            });
+    }
+
+    // Somewhere in your initialization code, e.g., main.cpp or a setup function
+    if (Services::eventBus) {
+        Services::eventBus->subscribe<DeathEvent>([](const DeathEvent& e) {
+            printf("DeathEvent: target=%p, team=%d\n", e.target, e.team);
+            });
+    }
+
+
     LineVisualizer line(vec2(0), vec2(0), vec3(255, 255, 0));
 
     while (!glfwWindowShouldClose(window))
@@ -293,6 +310,7 @@ int main()
 		player2Controller.update(dt);
 
 		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->velocity);
+        //aiController.setTarget(enemyship->getWorldPosition(), enemyship->velocity);
 		aiController.update(dt);
 
 		//printf("Player 1 Pos: (%.2f, %.2f) Vel: (%.2f, %.2f)\n", playerShip->position.x, playerShip->position.y, playerShip->physics.velocity.x, playerShip->physics.velocity.y);

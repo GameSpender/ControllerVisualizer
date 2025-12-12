@@ -161,6 +161,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="Actor.h" />
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="BaseComponent.h" />
     <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="Collider.h" />
@@ -173,6 +174,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="Guns.h" />
+    <ClInclude Include="HealthComponent.h" />
     <ClInclude Include="IControllable.h" />
     <ClInclude Include="Init.h" />
     <ClInclude Include="InputSystem.h" />
@@ -191,6 +193,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="SimpleShootingAi.h" />
     <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SpriteRenderer.h" />
+    <ClInclude Include="TeamRules.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Transform2D.h" />
     <ClInclude Include="GamepadInput.h" />

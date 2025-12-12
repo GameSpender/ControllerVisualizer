@@ -12,6 +12,7 @@
 #include "Events.h"
 #include "Weapon.h"
 #include "Physics.h"
+#include "HealthComponent.h"
 
 
 #include "IControllable.h"
@@ -26,6 +27,8 @@ using namespace glm;
 
 class Ship : public PhysicalActor2D, public IControllable
 {
+
+    std::shared_ptr<HealthComponent> health;
 
 public:    
     // Ship parameters
@@ -48,12 +51,24 @@ public:
     std::vector<std::shared_ptr<Hardpoint>> hardpoints;
     std::unordered_map<int, std::vector<std::shared_ptr<Hardpoint>>> actionMap;
 
-    bool destroyed = false;
-
     Ship() {
         physics.mass = 10.0f;
         physics.friction = 0.1f;
         physics.angularFriction = 1.0f;
+
+        health = addComponent<HealthComponent>(100.0f, 10.0f, 0);
+
+        // Subscribe to DeathEvent to mark ship as destroyed
+        if (Services::eventBus) {
+            Services::eventBus->process<DeathEvent>([this](const DeathEvent& e) {
+                if (e.target == health.get()) {
+                    for (auto hp : hardpoints)
+                        hp->stopFiring();
+
+                }
+                });
+        }
+
     }
     // -----------------------------------------
     //              MAIN UPDATE
@@ -62,8 +77,12 @@ public:
     {
         for (auto& hp : hardpoints) hp->update(dt);
 
-        glm::vec2 thrust = applyThrust(thrustDir, dt);
-        float rotThrust = applyRotationThrust(targetRot, thrustDir, dt);
+
+        if (!isDead()) {
+            glm::vec2 thrust = applyThrust(thrustDir, dt);
+            float rotThrust = applyRotationThrust(targetRot, thrustDir, dt);
+        }
+
 
         physics.integrate(*this, static_cast<float>(dt));
 
@@ -91,6 +110,7 @@ public:
     }
 
     void useAbility(int index, bool pressed) override {
+        if (isDead()) return;
         if (index < 0 || index >= 4) return; // assuming abilities 1-4
 
         if (index < hardpoints.size()) {
@@ -109,24 +129,17 @@ public:
 
 
 
-    void setDestroyed()
-    {
-        if (!destroyed) {
-            destroyed = true;
-        }
-        
-    }
+        // Forward health functions for convenience
+    bool isDead() const { return health->isDead(); }
+    void applyDamage(float amount, void* source = nullptr) { health->applyDamage(amount, source); }
+    void heal(float amount) { health->heal(amount); }
+    void respawnHealth() { health->respawn(); }
 
-    void setRepaired()
-    {
-        if(destroyed)
-            destroyed = false;
-    }
 
     void respawn(glm::vec2 pos, float rot = 0.0f) {
         position = pos;
         
-        setRepaired();
+        respawnHealth();
         resetPhysics();
         markDirty();
     }

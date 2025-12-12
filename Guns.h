@@ -285,12 +285,12 @@ class EnemyGun : public Weapon {
 
 public:
     EnemyGun() {
-        shotInterval = 2.f;
+        shotInterval = 1.0f;
         damage = 25.0f;
         team = 1;
     }
 
-    float shotSpeed = 800.0f;
+    float shotSpeed = 700.0f;
 
     float lifetime = 7.0f;
 
@@ -323,6 +323,7 @@ public:
             );
             projectile->init();
             projectile->scale = getWorldScale() / 1.5f;
+            projectile->spriteName = "enemy_shot";
             Services::projectiles->addProjectile(projectile);
 
             Services::eventBus->emit(ShootEvent{
