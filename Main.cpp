@@ -7,7 +7,10 @@
 #include <random>
 #include <iostream>
 #include "Util.h"
+
 #include "SpriteRenderer.h"
+#include "ModelRenderer.h"
+
 #include <glm/gtc/type_ptr.hpp>
 
 #include "LineVisualizer.h"
@@ -37,6 +40,7 @@
 #include "ShipFactory.h"
 
 #include "Services.h"
+
 
 using namespace glm;
 
@@ -85,8 +89,9 @@ int main()
     unsigned int rectShader = createShader("shaders/rect.vert", "shaders/rect.frag");
 	unsigned int pulseShader = createShader("shaders/passthrough.vert", "shaders/pulse_effect.frag");
     unsigned int debugShader = createShader("shaders/color.vert", "shaders/color.frag");
+	unsigned int Shader3D = createShader("shaders/3dColor.vert", "shaders/3dColor.frag");
 
-    glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -1.0f, 1.0f);
+    glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -100.0f, 1.0f);
     glUseProgram(rectShader);
     glUniformMatrix4fv(glGetUniformLocation(rectShader, "uProjection"), 1, GL_FALSE, glm::value_ptr(projection));
     glUseProgram(pulseShader);
@@ -97,7 +102,8 @@ int main()
 
 	//unsigned spriteTexture;
 	//preprocessTexture(spriteTexture, "res/cursor.png");
-	SpriteRenderer spriteRenderer(rectShader);   
+	SpriteRenderer spriteRenderer(rectShader);
+	ModelRenderer modelRenderer(Shader3D);
 
     LineVisualizer directionLine(
         glm::vec2(0, 0),
@@ -153,6 +159,8 @@ int main()
 	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
 	Services::assets->loadTexture("enemy_shot", "res/enemy_projectile.png");
 
+	Services::assets->loadModel("test_box", "res/models/box01.glb");
+    Services::assets->loadModel("plane", "res/models/plane.glb");
 
 	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
 	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
@@ -160,16 +168,6 @@ int main()
 	Services::sound->loadSound("minigun_stop", "assets/minigun_stop.wav");
     Services::sound->loadSound("enemy_shot", "assets/enemy_shoot.wav");
     Services::sound->loadSound("enemy_death", "assets/enemy_death.wav");
-
- //   assetManager.loadTexture("grass", "res/grass.png");
- //   assetManager.loadTexture("ship", "res/ship.png");
- //   assetManager.loadTexture("laser_shot", "res/projectile.png");
- //   assetManager.loadTexture("bullet_shot", "res/bullet.png");
-
- //   soundManager.loadSound("laser_shot", "assets/shoot.wav");
- //   soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
- //   soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
-	//soundManager.loadSound("minigun_stop", "assets/minigun_stop.wav");
 
 
     keyboard = {
@@ -294,7 +292,7 @@ int main()
             });
     }
 
-
+	float debugRotation = 0.0f;
     LineVisualizer line(vec2(0), vec2(0), vec3(255, 255, 0));
 
     while (!glfwWindowShouldClose(window))
@@ -334,7 +332,8 @@ int main()
 
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
-
+        
+        debugRotation += static_cast<float>(dt) * 0.1f;
 
 
         double currentTime = glfwGetTime();
@@ -371,13 +370,55 @@ int main()
                 line.Draw(debugShader, screenWidth, screenHeight);
             }
 
+            glEnable(GL_DEPTH_TEST);
 
-            //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-            //pulseRenderer.Render(sceneColorTex);
-			//testRenderer.Render(sceneColorTex);
-            
-            //directionLine.Draw(colorShader, mode->width, mode->height);
+            glm::mat3 worldMat3 = playerShip->getWorldMatrix();
+
+            // Convert to mat4
+            glm::mat4 modelMat(1.0f);
+
+            // Copy rotation + scale (upper-left 2x2)  
+            modelMat[0][0] = worldMat3[0][0];
+            modelMat[0][1] = worldMat3[0][1];
+            modelMat[1][0] = worldMat3[1][0];
+            modelMat[1][1] = worldMat3[1][1];
+
+            // Add translation (third row of mat3 is translation in x/y)
+            modelMat[3][0] = worldMat3[2][0]; // X
+            modelMat[3][1] = worldMat3[2][1]; // Y
+
+            // Set some depth (Z)
+            modelMat[3][2] = 0.0f; // or whatever Z you want
+
+			modelMat = glm::rotate(modelMat, glm::degrees(-90.0f), glm::vec3(1, 0, 0));
+			//modelMat = glm::rotate(modelMat, debugRotation, glm::vec3(1, 0, 1));
+			//modelMat = glm::scale(modelMat, glm::vec3(0.12f));
+            modelMat = glm::scale(modelMat, glm::vec3(0.6f));
+			//modelMat = glm::translate(modelMat, glm::vec3(1.0f, 1.0f, 0.0f));
+
+            //// Now draw
+            //modelRenderer.Draw(
+            //    Services::assets->getModel("test_box"),
+            //    modelMat,
+            //    mat4(1.0f),
+            //    projection
+            //);
+
+            modelRenderer.Draw(
+                Services::assets->getModel("plane"),
+                modelMat,
+                mat4(1.0f),
+                projection,
+                vec3(0.0f)
+			);
+
+
+
+			glDisable(GL_DEPTH_TEST);
+
+
+
             glfwSwapBuffers(window);
 
             currentTime = glfwGetTime();

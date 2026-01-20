@@ -112,12 +112,13 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;irrKlang.lib;freetype.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;irrKlang.lib;freetype.lib;assimp-vc143-mt.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(ProjectDir)dependencies;$(ProjectDir)lib\Winx64-visualStudio;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"
-copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
+      <Command> xcopy /Y /I /Q "$(ProjectDir)dependencies\*.dll" "$(TargetDir)"
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -135,15 +136,19 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)dependencies;$(ProjectDir)lib\Winx64-visualStudio;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>opengl32.lib;irrKlang.lib;freetype.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;irrKlang.lib;freetype.lib;assimp-vc143-mt.lib;$(CoreLibraryDependencies);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>copy /Y "$(ProjectDir)dependencies\irrKlang.dll" "$(OutDir)"
-copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
+      <Command> xcopy /Y /I /Q "$(ProjectDir)dependencies\*.dll" "$(TargetDir)"
+
+</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="res\models\box01.glb" />
+    <None Include="shaders\3dColor.frag" />
+    <None Include="shaders\3dColor.vert" />
     <None Include="shaders\color.frag" />
     <None Include="shaders\color.vert" />
     <None Include="shaders\passthrough.vert" />
@@ -154,6 +159,7 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ModelImporter.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -180,6 +186,8 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     <ClInclude Include="InputSystem.h" />
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LineVisualizer.h" />
+    <ClInclude Include="ModelImporter.h" />
+    <ClInclude Include="ModelRenderer.h" />
     <ClInclude Include="PhysicalActor2D.h" />
     <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Physics.h" />

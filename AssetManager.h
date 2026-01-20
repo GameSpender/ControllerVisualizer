@@ -8,6 +8,7 @@
 #include <iostream>
 
 #include "Util.h"
+#include "ModelImporter.h"
 
 
 class Texture {
@@ -35,6 +36,30 @@ public:
         return nullptr;
     }
 
+    // --------------------
+    // Models
+    // --------------------
+    void loadModel(const std::string& name, const std::string& filePath) {
+        if (models.find(name) != models.end()) return;
+
+        auto model = ModelImporter::loadModel(filePath);
+        if (!model) {
+            std::cerr << "Failed to load model: " << filePath << std::endl;
+            return;
+        }
+
+        std::cout << "Loaded model: " << filePath << std::endl;
+        models[name] = std::move(model);
+    }
+
+    Model* getModel(const std::string& name) {
+        auto it = models.find(name);
+        if (it != models.end()) return it->second.get();
+        std::cerr << "Model not found: " << name << std::endl;
+        return nullptr;
+    }
+
 private:
     std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
+    std::unordered_map<std::string, std::unique_ptr<Model>> models;
 };
