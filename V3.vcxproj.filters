@@ -15,32 +15,23 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="rect.frag">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="rect.vert">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="packages.config" />
-    <None Include="color.vert">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="color.frag">
-      <Filter>Source Files</Filter>
-    </None>
     <None Include="vcpkg.json" />
-    <None Include="passthrough.vert">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="pulse_effect.frag">
-      <Filter>Source Files</Filter>
-    </None>
+    <None Include="shaders\color.frag" />
+    <None Include="shaders\color.vert" />
+    <None Include="shaders\passthrough.vert" />
+    <None Include="shaders\pulse_effect.frag" />
+    <None Include="shaders\rect.frag" />
+    <None Include="shaders\rect.vert" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Util.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Physics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -94,6 +85,72 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PulseEffectRenderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Actor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="AssetManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EventBus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="InputSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Weapon.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProjectileSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="BindingGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SoundManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Events.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EventHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Physics.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Director.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Collider.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionSystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CollisionLayers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Services.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="IControllable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerController.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SimpleShootingAi.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Guns.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShipFactory.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="PhysicalActor2D.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -10,278 +10,53 @@
 #include "SpriteRenderer.h"
 #include <glm/gtc/type_ptr.hpp>
 
-#include "GamepadInput.h"
-#include "GamepadObject.h"
-
-#include "ship.h"
 #include "LineVisualizer.h"
-
-#include "Enemy.h"
 
 #include "irrKlang/irrKlang.h"
 #include "glm/ext.hpp"
 
 #include "TextRenderer.h"
-
 #include <format>
 #include "Init.h"
-#include "PulseEffectRenderer.h"
+#include "Actor.h"
+#include "AssetManager.h"
+#include "SoundManager.h"
+#include "EventHandler.h"
+#include "InputSystem.h"
+#include "EventBus.h"
+#include "ProjectileSystem.h"
+#include "PlayerController.h"
+
+#include "GamepadObject.h"
+#include "ship.h"
+#include "BindingGenerator.h"
+#include "CollisionSystem.h"
+#include "Guns.h"
+
+#include "SimpleShootingAi.h"
+#include "ShipFactory.h"
+
+#include "Services.h"
 
 using namespace glm;
 
-int endProgram(std::string message) {
-    std::cout << message << std::endl;
-    glfwTerminate();
-    return -1;
-}
+
 
 const GLFWvidmode* mode;
 int screenWidth = 800;
 int screenHeight = 800;
 
-
-irrklang::ISoundEngine* soundEngine = irrklang::createIrrKlangDevice();
-irrklang::ISoundSource* burstReady = soundEngine->addSoundSourceFromFile("assets/burst_ready.wav");
-
-
-std::shared_ptr<GamepadObject> gamepad;
-std::shared_ptr<Ship> ship;
+bool debugWeapon = false;
+bool debugDamage = false;
 
 
 
-void preprocessTexture(unsigned& texture, const char* filepath) {
-    texture = loadImageToTexture(filepath); // Učitavanje teksture
-    glBindTexture(GL_TEXTURE_2D, texture); // Vezujemo se za teksturu kako bismo je podesili
-
-    // Generisanje mipmapa - predefinisani različiti formati za lakše skaliranje po potrebi (npr. da postoji 32 x 32 verzija slike, ali i 16 x 16, 256 x 256...)
-    //glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-
-    //// Podešavanje strategija za wrap-ovanje - šta da radi kada se dimenzije teksture i poligona ne poklapaju
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT); // S - tekseli po x-osi
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT); // T - tekseli po y-osi
-
-    // Podešavanje algoritma za smanjivanje i povećavanje rezolucije: nearest - bira najbliži piksel, linear - usrednjava okolne piksele
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-}
-
-unsigned preprocessTexture(const char* filepath) {
-    unsigned texture;
-    preprocessTexture(texture, filepath);
-    return texture;
-}
-
-
-std::vector<Enemy> enemies;
-std::vector<Projectile> enemyProjectiles;
-unsigned enemyTex;
-unsigned int enemyProjTex;
-
-double nextSpawn = 10.0f;
-double difficulty = 1.0f;
-double spawning = false;
-int killCount = 0;
-
-
-void onMouseClick(GLFWwindow* window, int button, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        double xpos, ypos;
-        glfwGetCursorPos(window, &xpos, &ypos);
-        vec2 mousePos = vec2((float)xpos, (float)ypos);
-        if (gamepad) {
-            Interactive* hitObject = gamepad->hitTest(mousePos);
-            if (hitObject) {
-				hitObject->onMouseInput(button, action);
-            }
-        }
-	}
-    if (action == GLFW_RELEASE) {
-        if (gamepad)
-            gamepad->onMouseInput(button, action);
-    }
-}
-
-
-double mouseTimeout = 0.0f;
-double mouseTimeoutPeriod = 3.0f;
-bool gamepadIdle = true;
-
-void onMouseMove(GLFWwindow* window, double xpos, double ypos) {
-	static vec2 lastMousePos = vec2(0.0f);
-    double time = glfwGetTime();
-    vec2 mousePos = vec2((float)xpos, (float)ypos);
-    if (lastMousePos == mousePos) {
-        if (!gamepadIdle && time > mouseTimeout) {
-            glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-        }
-        return;
-    }
-    if (gamepad) {
-		gamepad->onMouseMove(mousePos);
-    }
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-    mouseTimeout = time + mouseTimeoutPeriod;
-	lastMousePos = mousePos;
-}
-
-std::vector<std::string> musicTracks = {
-    "audio/track1.ogg",
-    "audio/track2.ogg",
-    "audio/track3.ogg",
-    "audio/track4.ogg"
-};
-
-std::vector<std::string> musicQueue;
-irrklang::ISound* currentMusic = nullptr;
-
-void shuffleMusic() {
-    musicQueue = musicTracks;
-    std::shuffle(musicQueue.begin(), musicQueue.end(), std::mt19937(std::random_device{}()));
-}
-
-void playNextTrack(irrklang::ISoundEngine* engine) {
-    if (musicQueue.empty()) {
-        shuffleMusic(); // reshuffle when all tracks are used
-    }
-
-    std::string track = musicQueue.back();
-    musicQueue.pop_back();
-
-    if (currentMusic) {
-        currentMusic->drop();
-    }
-
-    currentMusic = engine->play2D(track.c_str(), false, false, true);
-    currentMusic->setVolume(0.7f);
-}
-
-void updateMusic(irrklang::ISoundEngine* engine) {
-    if (!currentMusic || currentMusic->isFinished()) {
-        playNextTrack(engine);
-    }
-}
-
-void destroySound() {
-    soundEngine->play2D("assets/explosion.wav");
-}
-
-void shootSound() {
-    soundEngine->play2D("assets/shoot.wav");
-}
-
-void burstSound() {
-    soundEngine->play2D("assets/burst.wav");
-}
-
-void burstCooldownSound() {
-    soundEngine->play2D("assets/burst_cooldown.wav");
-}
-
-void burstReadySound() {
-    soundEngine->play2D(burstReady);
-}
-
-void enemyShootSound() {
-    soundEngine->play2D("assets/enemy_shoot.wav");
-}
-
-void enemyDeathSound() {
-    soundEngine->play2D("assets/enemy_death.wav");
-}
-
-void onButtonEvent(int action) {
-    if (action == GLFW_PRESS) {
-        std::cout << "Button Pressed!" << std::endl;
-    }
-    else if (action == GLFW_RELEASE) {
-        std::cout << "Button Released!" << std::endl;
-    }
-}
-
-void onStickEvent(vec2 position) {
-}
-
-void onLeftThumbstick(vec2 position) {
-    if (ship) {
-        ship->setThrust(position);
-    }
-}
-
-void onRightThumbstick(vec2 position) {
-    if (ship) {
-        ship->setDirection(position);
-    }
-}
-
-
-bool shooting = false;
-void onShootEvent(int action) {
-    
-    if (action == GLFW_PRESS) {
-        shooting = true;
-    }
-    else if (action == GLFW_RELEASE) {
-        shooting = false;
-    }
-}
-
-void onBurstEvent(int action) {
-    if (action == GLFW_PRESS) {
-        ship->burst();
-    }
-}
-
-void onEnableSpawning(int action) {
-    if (action == GLFW_PRESS) {
-        if (!spawning) {
-            difficulty = 1.2f;
-            spawning = true;
-            nextSpawn = glfwGetTime() + 2.0f;
-            killCount = 0;
-        }
-        if (spawning && ship->destroyed) {
-            difficulty = 1.2f;
-            spawning = false;
-            nextSpawn = glfwGetTime() + 2.0f;
-
-
-            ship->setRepaired();
-            ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
-            ship->rotation = 0;
-            ship->inertiaAngular = 0;
-            ship->inertiaLinear = vec2(0);
-
-            enemies.clear();
-            enemyProjectiles.clear();
-
-            enemies.shrink_to_fit();
-            enemyProjectiles.shrink_to_fit();
-        }
-    }
-}
 
 int main()
 {
     // Inicijalizacija GLFW i postavljanje na verziju 3 sa programabilnim pajplajnom
-    glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    GLFWwindow* window = initGLFW();
 
-    GLFWmonitor* primaryMonitor = glfwGetPrimaryMonitor();
-    mode = glfwGetVideoMode(primaryMonitor);
-
-    glfwWindowHint(GLFW_RED_BITS, mode->redBits);
-    glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
-    glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
-    glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
-
-    GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "Controller Visualizer", primaryMonitor, NULL);
-    if (window == NULL) return endProgram("Failed to create window");
-    glfwMakeContextCurrent(window);
 
     GLFWcursor* cursor = loadImageToCursor("res/grass_cursor.png");
     glfwSetCursor(window, cursor);
@@ -289,8 +64,14 @@ int main()
     // Inicijalizacija GLEW
     if (glewInit() != GLEW_OK) return endProgram("GLEW failed to initialize");
 
-    screenWidth = mode->width;
-    screenHeight = mode->height;
+
+    {
+        mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        screenWidth = mode->width;
+        screenHeight = mode->height;
+
+    }
+
 
     CreateSceneFramebuffer(screenWidth, screenHeight);
 
@@ -302,86 +83,21 @@ int main()
 
 
     unsigned int rectShader = createShader("shaders/rect.vert", "shaders/rect.frag");
-    unsigned int colorShader = createShader("shaders/color.vert", "shaders/color.frag");
 	unsigned int pulseShader = createShader("shaders/passthrough.vert", "shaders/pulse_effect.frag");
+    unsigned int debugShader = createShader("shaders/color.vert", "shaders/color.frag");
 
-    glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, (float)mode->height, 0.0f, -1.0f, 1.0f);
+    glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -1.0f, 1.0f);
     glUseProgram(rectShader);
     glUniformMatrix4fv(glGetUniformLocation(rectShader, "uProjection"), 1, GL_FALSE, glm::value_ptr(projection));
     glUseProgram(pulseShader);
     glUniform2f(glGetUniformLocation(pulseShader, "uScreenSize"), screenWidth, screenHeight);
 
 
-	PulseEffectRenderer pulseRenderer(pulseShader);
+	//PulseEffectRenderer pulseRenderer(pulseShader);
 
 	//unsigned spriteTexture;
 	//preprocessTexture(spriteTexture, "res/cursor.png");
-	SpriteRenderer spriteRenderer(rectShader);
-
-	GamepadInput gamepadInput;
-
-    
-
-
-    ButtonObject button(
-        preprocessTexture("res/button_idle.png"),
-        preprocessTexture("res/button_pressed.png"),
-        RECTANGLE
-    );
-
-    AnalogStickObject analogStick(
-        preprocessTexture("res/stick_head.png"),
-        preprocessTexture("res/stick_head_pressed.png")
-	);
-
-
-    GamepadTextures gamepadTex = {
-    .gamepadBody = preprocessTexture("res/body.png"),
-    .stickHead = preprocessTexture("res/stick_idle.png"),
-    .stickHeadPressed = preprocessTexture("res/stick_pressed.png"),
-    .buttonAIdle = preprocessTexture("res/a_idle.png"),
-    .buttonAPressed = preprocessTexture("res/a_pressed.png"),
-    .buttonBIdle = preprocessTexture("res/b_idle.png"),
-    .buttonBPressed = preprocessTexture("res/b_pressed.png"),
-    .buttonXIdle = preprocessTexture("res/x_idle.png"),
-    .buttonXPressed = preprocessTexture("res/x_pressed.png"),
-    .buttonYIdle = preprocessTexture("res/y_idle.png"),
-    .buttonYPressed = preprocessTexture("res/y_pressed.png"),
-    .dpadIdle = preprocessTexture("res/dpad_idle.png"),
-    .dpadPressed = preprocessTexture("res/dpad_pressed.png"),
-    .bumper = preprocessTexture("res/bumper.png"),
-    .bumperPressed = preprocessTexture("res/bumper_pressed.png")
-    };
-
-	gamepad = make_shared<GamepadObject>(gamepadTex);
-    gamepad->initHiearchy();
-	gamepad->position = vec2(mode->width * 0.5f, mode->height * 0.3);
-	gamepad->scale = vec2(800.0f);
-	gamepad->markDirty();
-
-	ship = make_shared<Ship>(preprocessTexture("res/ship.png"), preprocessTexture("res/projectile.png"), preprocessTexture("res/smoke.png"),
-        preprocessTexture("res/burst.png"),
-        mode->width, mode->height);
-	ship->position = vec2(mode->width * 0.5f, mode->height * 0.8f);
-	ship->scale = vec2(50.0f);
-    ship->destroyedCallback = destroySound;
-    ship->shootCallback = shootSound;
-    ship->burstCallback = burstSound;
-    ship->BurstOnCooldownCallback = burstCooldownSound;
-    ship->BurstReadyCallback = burstReadySound;
-	ship->markDirty();
-
-    gamepad->leftStick->onStickEvent = onLeftThumbstick;
-	gamepad->rightStick->onStickEvent = onRightThumbstick;
-    gamepad->buttonA->onButtonEvent = onShootEvent;
-    gamepad->bumperRight->onButtonEvent = onShootEvent;
-    gamepad->bumperLeft->onButtonEvent = onBurstEvent;
-    gamepad->buttonY->onButtonEvent = onEnableSpawning;
-
-    //enemy stuff
-    enemyTex = preprocessTexture("res/enemy.png");
-    enemyProjTex = preprocessTexture("res/enemy_projectile.png");
-    
+	SpriteRenderer spriteRenderer(rectShader);   
 
     LineVisualizer directionLine(
         glm::vec2(0, 0),
@@ -390,37 +106,196 @@ int main()
     );
 
 
-    soundEngine->setSoundVolume(0.5f);
-    burstReady->setDefaultVolume(1.0f);
-
-    shuffleMusic();
 
 
 
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
 
-	glfwSetMouseButtonCallback(window, onMouseClick);
-
     TextRenderer titleText;
-    TextRenderer killcountText;
     titleText.LoadFont("fonts/font.otf", 80, glm::vec3(0.8f, 0.5f, 0.1f)); // baked orange
     titleText.position = vec2(mode->width * 0.22f, mode->height * 0.7f);
 
-    killcountText.LoadFont("fonts/font.otf", 170, glm::vec3(0.8f, 0.5f, 0.1f)); // baked orange
-    killcountText.position = vec2(mode->width * 0.375f, mode->height * 0.85f);
-
     unsigned int signatureTexture = preprocessTexture("res/signature.png");
+
+    
+    // ----------------- new stuff -------------------
+
+    PlayerInput playerInput;
+    PlayerInput player2Input;
+    ShipFactory factory;
+
+
+    InputDevice keyboard;
+    InputDevice gamepad;
+    InputDevice gamepad2;
+    InputDevice mouse;
+
+	GamepadInput gamepadInput;
+    
+    
+    Services::init(
+        new InputSystem,
+        new EventBus,
+        new AssetManager,
+		new SoundManager,
+        new EventHandler,
+		new ProjectileSystem,
+        new CollisionSystem
+    );
+
+
+    // ----------------- new stuff -------------------
+
+	Services::assets->loadTexture("grass", "res/grass.png");
+	Services::assets->loadTexture("ship", "res/ship.png");
+    Services::assets->loadTexture("enemy_ship_basic", "res/enemy.png");
+	Services::assets->loadTexture("laser_shot", "res/projectile.png");
+	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
+	Services::assets->loadTexture("enemy_shot", "res/enemy_projectile.png");
+
+
+	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
+	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
+	Services::sound->loadSound("minigun_shoot", "assets/minigun_shoot.wav");
+	Services::sound->loadSound("minigun_stop", "assets/minigun_stop.wav");
+    Services::sound->loadSound("enemy_shot", "assets/enemy_shoot.wav");
+    Services::sound->loadSound("enemy_death", "assets/enemy_death.wav");
+
+ //   assetManager.loadTexture("grass", "res/grass.png");
+ //   assetManager.loadTexture("ship", "res/ship.png");
+ //   assetManager.loadTexture("laser_shot", "res/projectile.png");
+ //   assetManager.loadTexture("bullet_shot", "res/bullet.png");
+
+ //   soundManager.loadSound("laser_shot", "assets/shoot.wav");
+ //   soundManager.loadSound("minigun_spool", "assets/minigun_spool.wav");
+ //   soundManager.loadSound("minigun_shoot", "assets/minigun_shoot.wav");
+	//soundManager.loadSound("minigun_stop", "assets/minigun_stop.wav");
+
+
+    keyboard = {
+        .type = DeviceType::Keyboard,
+        .id = 0
+    };
+    mouse = {
+        .type = DeviceType::Mouse,
+        .id = 0
+    };
+    gamepad = {
+        .type = DeviceType::Gamepad,
+        .id = 0
+    };
+    gamepad2 = {
+        .type = DeviceType::Gamepad,
+        .id = 1
+    };
+
+
+    bindKeyboardAndMouse(keyboard, mouse, playerInput, screenHeight);
+
+    bindGamepad(gamepad, player2Input);
+
+    //bindGamepad(gamepad2, player2Input);
+
+    
+
+	Services::inputSystem->devices.push_back(keyboard);
+	Services::inputSystem->devices.push_back(mouse);
+	Services::inputSystem->devices.push_back(gamepad);
+	Services::inputSystem->players.push_back(playerInput);
+	Services::inputSystem->players.push_back(player2Input);
+
+
+
+    std::shared_ptr<Ship> playerShip = std::make_shared<Ship>();
+    playerShip->spriteName = "ship";
+    playerShip->screenMax = vec2(screenWidth, screenHeight);
+    playerShip->respawn(vec2(500, 500));
+    playerShip->scale = vec2(50.0f);
+
+    std::shared_ptr<Collider2D> shipCollider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
+    shipCollider->mask = CollisionLayer::All;
+    shipCollider->layer = CollisionLayer::Player;
+    shipCollider->scale = vec2(0.8f);
+    Services::collisions->addCollider(shipCollider);
+    playerShip->addChild(shipCollider);
+
+    shipCollider->onCollisionEnter = [](Collider2D*) {
+        std::cout << "Ship 1 collided with!\n";
+        };
+    shipCollider->onCollisionExit = [](Collider2D*) {
+        std::cout << "Ship 1 stopped being collided with!\n";
+        };
+
+
+    // Create primary hardpoint and attach a weapon
+    auto primaryHP = std::make_shared<Hardpoint>();
+	primaryHP->position = vec2(0, -0.9f);
+    auto laserGun = std::make_shared<LaserGun>();
+    primaryHP->attachWeapon(laserGun);
+
+    // Add hardpoint to ship and bind to action
+    playerShip->addHardpoint(primaryHP, 0);
+
+
+    std::shared_ptr<Ship> player2Ship = std::make_shared<Ship>();
+    player2Ship->spriteName = "ship";
+    player2Ship->screenMax = vec2(screenWidth, screenHeight);
+    player2Ship->respawn(vec2(500, 500));
+    player2Ship->scale = vec2(50.0f);
+
+    std::shared_ptr<Collider2D> ship2Collider = std::make_shared<Collider2D>(Collider2D::ShapeType::Circle);
+    ship2Collider->mask = CollisionLayer::All;
+    ship2Collider->layer = CollisionLayer::Player;
+    ship2Collider->scale = vec2(0.8f);
+    Services::collisions->addCollider(ship2Collider);
+    player2Ship->addChild(ship2Collider);
+
+    // Create primary hardpoint and attach a weapon
+    auto primaryHP2 = std::make_shared<Hardpoint>();
+	primaryHP2->position = vec2(0, -1.0f);
+    auto laserMinigun = std::make_shared<LaserMinigun>();
+    primaryHP2->attachWeapon(laserMinigun);
+
+    // Add hardpoint to ship and bind to action
+    player2Ship->addHardpoint(primaryHP2, 0);
+
+    auto enemyship = factory.spawnEnemy(vec2(1000, 700), 0);
+
+    PlayerController playerController(&Services::inputSystem->players[0]);
+    PlayerController player2Controller(&Services::inputSystem->players[1]);
+	SimpleShootingAi aiController;
+
+    //playerController.possess(playerShip.get());
+	playerController.possess(playerShip.get());
+	player2Controller.possess(player2Ship.get());
+    aiController.possess(enemyship.get());
+
+    std::shared_ptr<GamepadObject> gamepadVisualizer = std::make_shared<GamepadObject>();
+    gamepadVisualizer->initHiearchy();
+    gamepadVisualizer->position = vec2(screenWidth / 2, screenHeight * 0.3);
 
     int framerateCap = 75;
     double frameInterval = 1.0f / framerateCap;
     double nextFrameTime = 0.0f;
+
     double lastTime = 0.0f;
 
+    // Somewhere in initialization, after the EventBus is ready:
+    if (Services::eventBus) {
+        Services::eventBus->subscribe<DamageEvent>([](const DamageEvent& e) {
+            printf("Damage dealt: %.2f to target %p (team %d)\n", e.amount, e.target, e.team);
+            });
+    }
 
-	pulseRenderer.pulseStrength = 0.03f;
-	pulseRenderer.pulseWidth = 30.0f;
-    pulseRenderer.screenHeight = screenWidth;
-	pulseRenderer.screenHeight = screenHeight;
+    // Somewhere in your initialization code, e.g., main.cpp or a setup function
+    if (Services::eventBus) {
+        Services::eventBus->subscribe<DeathEvent>([](const DeathEvent& e) {
+            printf("DeathEvent: target=%p, team=%d\n", e.target, e.team);
+            });
+    }
+
+
+    LineVisualizer line(vec2(0), vec2(0), vec3(255, 255, 0));
 
     while (!glfwWindowShouldClose(window))
     {
@@ -428,181 +303,78 @@ int main()
         double dt = time - lastTime;
         lastTime = time;
 
+
+        Services::inputSystem->update();
+        
+		playerController.update(dt);
+		player2Controller.update(dt);
+
+		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->getVelocity());
+        //aiController.setTarget(enemyship->getWorldPosition(), enemyship->velocity);
+		aiController.update(dt);
+
+		//printf("Player 1 Pos: (%.2f, %.2f) Vel: (%.2f, %.2f)\n", playerShip->position.x, playerShip->position.y, playerShip->physics.velocity.x, playerShip->physics.velocity.y);
+        
+        playerShip->update(dt);
+        player2Ship->update(dt);
+        enemyship->update(dt);
+
+        Services::projectiles->update(dt);
+
+        
+        gamepadInput.updateFromGLFW(gamepad.id);
+        gamepadVisualizer->updateFromInput(gamepadInput);
+        gamepadVisualizer->update(dt);
+
+        Services::collisions->update();
+
+
+        Services::eventHandler->processEvents();
+        Services::eventBus->clear();
+
         if(glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 			glfwSetWindowShouldClose(window, true);
 
-        if (glfwJoystickPresent(GLFW_JOYSTICK_1)) {
-            gamepadIdle = false;
-            if (gamepadInput.updateFromGLFW(GLFW_JOYSTICK_1)) {
-				gamepad->updateFromInput(gamepadInput);
-            }
-        }
-        else {
-            gamepadIdle = true;
-        }
-
-        {
-            double xpos, ypos;
-            glfwGetCursorPos(window, &xpos, &ypos);
-            onMouseMove(window, xpos, ypos);
-        }
-
-
-        gamepad->update(dt);
-
-        if (shooting) ship->shoot();
-        ship->update(dt);
-
-        if (spawning && time > nextSpawn) {
-            int spawnCount = difficulty * difficulty;
-
-            for (int i = 0; i < spawnCount; i++) {
-
-                // Choose a random direction
-                float angle = glm::linearRand(0.0f, glm::two_pi<float>());
-                vec2 dir = vec2(glm::cos(angle), glm::sin(angle));
-
-                // Choose random spawn distance
-                float distance = glm::linearRand(600.0f, 1200.0f);
-                vec2 spawnPos = ship->position + dir * distance;
-
-                // Create enemy
-                enemies.emplace_back(Enemy(enemyTex, enemyProjTex, mode->width, mode->height));
-                Enemy& e = enemies.back();
-
-                e.scale = vec2(50.0f);
-                e.position = spawnPos;
-
-                // Assign random velocity
-                // speed between 50–150
-                float speed = glm::linearRand(50.0f, 150.0f);
-
-                // 50% chance to drift roughly toward the ship
-                if (glm::linearRand(0.0f, 1.0f) < 0.5f) {
-                    vec2 toShip = glm::normalize(ship->position - spawnPos);
-                    e.velocity = toShip * speed;
-                }
-                else {
-                    // Random direction
-                    float moveAngle = glm::linearRand(0.0f, glm::two_pi<float>());
-                    e.velocity = vec2(glm::cos(moveAngle), glm::sin(moveAngle)) * speed;
-                }
-            }
-
-            difficulty += 0.1f;
-            nextSpawn = time + 5.0f; // optional adaptive spawn rate
-        }
-
-
-        for (auto it = enemies.begin(); it != enemies.end(); ) {
-            it->update(dt);
-            if (it->canShoot()) {
-                enemyProjectiles.push_back(it->shootAt(ship->position, ship->inertiaLinear, dt));
-                enemyShootSound();
-            }
-                
-            // Check if hit by any projectile
-            for (auto& proj : ship->projectiles) {
-                if (it->checkHit(*proj)) {
-                    it->health -= 25.0f;
-                    if (auto ptr = dynamic_pointer_cast<Explosion>(proj)) {}
-                    else 
-                        proj->lifetime = -1.0f; // mark projectile for removal
-                }
-            }
-
-            // Remove dead enemies
-            if (it->health <= 0.0f) {
-                enemyDeathSound();
-                it = enemies.erase(it);
-                killCount++;
-            }
-            else {
-                ++it;
-            }
-        }
-
-        for (auto p = enemyProjectiles.begin(); p != enemyProjectiles.end(); ) {
-            p->update(dt);
-            //cout << "projectile: " << to_string(p->position) << endl;
-            bool projectile_intercepted = false;
-            for (auto& proj : ship->projectiles) {
-
-                //destroy projectile if hit by burst
-                if (auto burst = dynamic_pointer_cast<Explosion>(proj)) {
-                    projectile_intercepted = length(p->getWorldPosition() - burst->getWorldPosition()) < burst->getWorldScale().x / 2;
-                    if (projectile_intercepted) 
-                        cout << length(p->position - burst->position) << endl;
-                }
-            } 
-            if (!projectile_intercepted && ship->checkHit(*p)) {
-                p->lifetime = 0;
-                ship->setDestroyed();
-            }
-            if (p->lifetime < 0 || projectile_intercepted) {
-                p = enemyProjectiles.erase(p);
-            }
-            else {
-                ++p;
-            }
-        }
-
-        pulseRenderer.pulseActive = false;
-        for (auto& proj : ship->projectiles) {
-            if (auto burst = dynamic_pointer_cast<Explosion>(proj)) {
-				pulseRenderer.pulseCenter = burst->getWorldPosition();
-                //pulseRenderer.pulseRadius = 100.0f;
-				pulseRenderer.pulseRadius = burst->getWorldScale().x * 0.5f;
-				pulseRenderer.pulseActive = true;
-            }
-        }
-
-        if (spawning)
-            updateMusic(soundEngine);
-
-
-		//directionLine.start = ship->getWorldPosition();
-		//directionLine.end = ship->getWorldPosition() + ship->forward() * 50.0f;
 
 
         double currentTime = glfwGetTime();
-        if (nextFrameTime < currentTime) {
-            float renderTime = currentTime;
+        if (nextFrameTime <= currentTime) {
+            double renderTime = currentTime;
 
-            glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
+            //glBindFramebuffer(GL_FRAMEBUFFER, sceneFBO);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glViewport(0, 0, screenWidth, screenHeight);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-            if (spawning) {
-
-                killcountText.DrawText(spriteRenderer, format("{:04}", killCount));
-            }
-            else {
-                titleText.DrawText(spriteRenderer, "Controller Visualizer");
-            }
+            titleText.DrawText(spriteRenderer, "Controller Visualizer");
 
             {
                 auto size = vec2(100, 100);
-                auto pos = vec2(screenWidth - 60, 30);
+                auto pos = vec2(screenWidth - 60, 60);
                 spriteRenderer.Draw(signatureTexture, pos, size);
             }
             
 
+            spriteRenderer.Draw(Services::assets->getTexture(playerShip->spriteName)->id, playerShip->getWorldMatrix());
 
-            gamepad->Draw(spriteRenderer);
-            ship->Draw(spriteRenderer);
-            for (auto& e : enemies)
-                e.Draw(spriteRenderer);
-            for (auto& p : enemyProjectiles)
-                p.Draw(spriteRenderer);
+            spriteRenderer.Draw(Services::assets->getTexture(player2Ship->spriteName)->id, player2Ship->getWorldMatrix());
+
+            spriteRenderer.Draw(Services::assets->getTexture(enemyship->spriteName)->id, enemyship->getWorldMatrix());
+
+            Services::projectiles->render(spriteRenderer, *Services::assets);
+            
+            if (debugWeapon) {
+                line.start = laserMinigun->getWorldPosition();
+                line.end = line.start + laserMinigun->forwardWorld() * 1000.0f;
+                line.Draw(debugShader, screenWidth, screenHeight);
+            }
 
 
+            //glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-            pulseRenderer.Render(sceneColorTex);
+            //pulseRenderer.Render(sceneColorTex);
 			//testRenderer.Render(sceneColorTex);
             
             //directionLine.Draw(colorShader, mode->width, mode->height);
@@ -617,7 +389,7 @@ int main()
     }
 
     glDeleteProgram(rectShader);
-    glDeleteProgram(colorShader);
+    glDeleteProgram(pulseShader);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;

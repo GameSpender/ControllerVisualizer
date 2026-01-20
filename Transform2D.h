@@ -8,6 +8,7 @@
 #include <glm/gtx/transform2.hpp>  // for glm::translate(), rotate(), scale()
 #include <glm/gtx/matrix_operation.hpp>
 
+#include "SpriteRenderer.h"
 
 using namespace glm;
 
@@ -57,6 +58,15 @@ public:
         child->setParent(shared_from_this());
     }
 
+    void removeChild(const std::shared_ptr<Transform2D>& child) {
+        auto it = std::find(children.begin(), children.end(), child);
+        if (it != children.end()) {
+            (*it)->parent.reset();
+            children.erase(it);
+        }
+    }
+
+
 
     // ---------------- Dirty Propagation ----------------
 
@@ -68,10 +78,14 @@ public:
 
     // ---------------- Matrix Builders ----------------
 
-    mat3 calcLocalMatrix() const {
+    mat3 calcLocalMatrix() {
         // 2D transform = T * R * S
         mat3 T = mat3(1.0f);
         T[2] = vec3(position, 1.0f);
+
+        rotation = std::fmod(rotation, glm::two_pi<float>());
+        if (rotation < 0.0f)
+            rotation += glm::two_pi<float>();
 
         mat3 R = mat3(
             cos(rotation), -sin(rotation), 0,
@@ -124,7 +138,7 @@ public:
 
     // ---------------- World-space helpers ----------------
 
-    vec2 getWorldPosition() {
+    glm::vec2 getWorldPosition() {
         const mat3& m = getWorldMatrix();
         return vec2(m[2].x, m[2].y);
     }
@@ -134,14 +148,19 @@ public:
         return atan2(m[1][0], m[0][0]);
     }
 
-    vec2 getWorldScale() {
+    glm::vec2 getWorldScale() {
         const mat3& m = getWorldMatrix();
         float sx = length(vec2(m[0][0], m[1][0]));
         float sy = length(vec2(m[0][1], m[1][1]));
         return vec2(sx, sy);
     }
 
+    void setRotation(vec2 dir) {
+        if (length(dir) == 0.0f) return; 
+        rotation = atan2(dir.y, -dir.x) + radians(90.0f);
+    }
+
+
 	// ---------------- Virtual ----------------
-    virtual void Update(double dt) {}
-    virtual void Draw(SpriteRenderer&) {}
+    virtual void update(double dt) {}
 };

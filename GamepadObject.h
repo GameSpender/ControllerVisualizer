@@ -11,8 +11,7 @@
 #include "ButtonObject.h"
 
 #include "GamepadInput.h"
-#include "InteractionInterfaces.h"
-
+#include "Actor.h"
 
 using namespace glm;
 
@@ -34,7 +33,7 @@ struct GamepadTextures{
 	unsigned int bumperPressed;
 };;
 
-class GamepadObject : public Transform2D, public Interactive, public Animated{
+class GamepadObject : public Actor2D {
 
 	unsigned int gamepadBody;
 public:
@@ -56,32 +55,32 @@ public:
 
 public:
 
-	GamepadObject(GamepadTextures tex):
-		gamepadBody(tex.gamepadBody)
+	GamepadObject()
 	{// Setup hierarchy
-		leftStick = std::make_shared<AnalogStickObject>(tex.stickHead, tex.stickHeadPressed);
-		rightStick = std::make_shared<AnalogStickObject>(tex.stickHead, tex.stickHeadPressed);
+		spriteName = "gamepad_body";
+		leftStick = std::make_shared<AnalogStickObject>();
+		rightStick = std::make_shared<AnalogStickObject>();
 
-		buttonA = std::make_shared<ButtonObject>(tex.buttonAIdle, tex.buttonAPressed, CIRCLE);
-		buttonB = std::make_shared<ButtonObject>(tex.buttonBIdle, tex.buttonBPressed, CIRCLE);
-		buttonX = std::make_shared<ButtonObject>(tex.buttonXIdle, tex.buttonXPressed, CIRCLE);
-		buttonY = std::make_shared<ButtonObject>(tex.buttonYIdle, tex.buttonYPressed, CIRCLE);
+		buttonA = std::make_shared<ButtonObject>("button_A", "button_A_pressed");
+		buttonB = std::make_shared<ButtonObject>("button_B", "button_B_pressed");
+		buttonX = std::make_shared<ButtonObject>("button_X", "button_X_pressed");
+		buttonY = std::make_shared<ButtonObject>("button_Y", "button_Y_pressed");
 
-		dpadUp = std::make_shared<ButtonObject>(tex.dpadIdle, tex.dpadPressed, RECTANGLE);
-		dpadDown = std::make_shared<ButtonObject>(tex.dpadIdle, tex.dpadPressed, RECTANGLE);
-		dpadLeft = std::make_shared<ButtonObject>(tex.dpadIdle, tex.dpadPressed, RECTANGLE);
-		dpadRight = std::make_shared<ButtonObject>(tex.dpadIdle, tex.dpadPressed, RECTANGLE);
+		dpadUp = std::make_shared<ButtonObject>("dpad", "dpad_pressed");
+		dpadDown = std::make_shared<ButtonObject>("dpad", "dpad_pressed");
+		dpadLeft = std::make_shared<ButtonObject>("dpad", "dpad_pressed");
+		dpadRight = std::make_shared<ButtonObject>("dpad", "dpad_pressed");
 
-		bumperLeft = std::make_shared<ButtonObject>(tex.bumper, tex.bumperPressed, RECTANGLE);
-		bumperRight = std::make_shared<ButtonObject>(tex.bumper, tex.bumperPressed, RECTANGLE);
+		bumperLeft = std::make_shared<ButtonObject>("bumper", "bumper_pressed");
+		bumperRight = std::make_shared<ButtonObject>("bumper", "bumper_pressed");
 
 		// Position components appropriately (example positions, adjust as needed)
 		double tempscale = 1.0f / 100.0f;
 
-		leftStick->position = vec2(-12.0f * tempscale, 0.0f * tempscale);
+		leftStick->setOrigin(vec2(-12.0f * tempscale, 0.0f * tempscale));
 		leftStick->scale = vec2(10.0f * tempscale);
 		leftStick->displacementFactor = vec2(0.4f);
-		rightStick->position = vec2(12.0f * tempscale, 0.0f * tempscale);
+		rightStick->setOrigin(vec2(12.0f * tempscale, 0.0f * tempscale));
 		rightStick->scale = vec2(10.0f * tempscale);
 		rightStick->displacementFactor = vec2(0.4f);
 
@@ -116,14 +115,14 @@ public:
 		dpadRight->rotation = radians(270.0f);
 		dpadRight->scale = vec2(7.0f * tempscale);
 
-		// Bumpers
+		// Burgers :)
 		
 		bumperLeft->position = vec2(-22.0f * tempscale, -30.0f * tempscale);
-		bumperLeft->scale = vec2(15.0f) * tempscale;
+		bumperLeft->scale = vec2(15.0f * tempscale);
 		bumperRight->position = vec2(22.0f * tempscale, -30.0f * tempscale);
-		bumperRight->scale = vec2(15.0f) * tempscale;
+		bumperRight->scale = vec2(15.0f * tempscale);
 
-		scale = vec2(500.0f);
+		scale = vec2(500.0f, -500.0f);
 		markDirty();
 	}
 
@@ -163,54 +162,8 @@ public:
 		bumperRight->setPressed(input.rightBumper);
 	}
 
-	virtual Interactive* hitTest(vec2 world) override {
-		for (auto child : children) {
-			auto hitTestableChild = dynamic_pointer_cast<Interactive>(child);
-			if (hitTestableChild && hitTestableChild->hitTest(world)) {
-				return hitTestableChild.get();
-			}
-		}
-
-		return nullptr;
-	}
-
-	virtual void onMouseInput(int button, int inputType) override {
-		if (inputType == GLFW_RELEASE) {
-						// Propagate to all children
-			for (auto child : children) {
-				auto interactiveChild = dynamic_pointer_cast<Interactive>(child);
-				if (interactiveChild) {
-					interactiveChild->onMouseInput(button, inputType);
-				}
-			}
-		}
-	}
-
-	virtual void onMouseMove(vec2 mousePos) override {
-		leftStick->onMouseMove(mousePos);
-		rightStick->onMouseMove(mousePos);
-	}
-
 	virtual void update(double dt) override {
 		leftStick->update(dt);
 		rightStick->update(dt);
 	}
-
-	void Draw(SpriteRenderer& renderer) override{
-		renderer.Draw(gamepadBody, getWorldMatrix());
-
-		leftStick->Draw(renderer);
-		rightStick->Draw(renderer);
-		buttonA->Draw(renderer);
-		buttonB->Draw(renderer);
-		buttonX->Draw(renderer);
-		buttonY->Draw(renderer);
-		dpadUp->Draw(renderer);
-		dpadDown->Draw(renderer);
-		dpadLeft->Draw(renderer);
-		dpadRight->Draw(renderer);
-		bumperLeft->Draw(renderer);
-		bumperRight->Draw(renderer);
-	}
-
 };

@@ -111,7 +111,7 @@ void TextRenderer::DrawText(SpriteRenderer& renderer, const std::string& text)
         Transform2D glyphTransform;
         glyphTransform.position = position + glm::vec2(xpos, ypos);
         glyphTransform.rotation = rotation;
-        glyphTransform.scale = scale * glm::vec2(g.size);
+        glyphTransform.scale = scale * glm::vec2(g.size.x, -g.size.y);
         // Advance cursor by FreeType's horizontal advance (1/64 pixels)
         
 

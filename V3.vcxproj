@@ -143,39 +143,63 @@ copy /Y "$(ProjectDir)dependencies\freetype.dll" "$(OutDir)"</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <None Include="passthrough.vert" />
-    <None Include="rect.frag" />
-    <None Include="rect.vert" />
-    <None Include="color.frag" />
-    <None Include="color.vert" />
     <None Include="packages.config" />
+    <None Include="shaders\color.frag" />
+    <None Include="shaders\color.vert" />
+    <None Include="shaders\passthrough.vert" />
+    <None Include="shaders\pulse_effect.frag" />
+    <None Include="shaders\rect.frag" />
+    <None Include="shaders\rect.vert" />
     <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
-    <None Include="pulse_effect.frag">
-      <FileType>Document</FileType>
-    </None>
+    <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Actor.h" />
     <ClInclude Include="AnalogStickObject.h" />
+    <ClInclude Include="AssetManager.h" />
+    <ClInclude Include="BaseComponent.h" />
+    <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
+    <ClInclude Include="Collider.h" />
+    <ClInclude Include="CollisionLayers.h" />
+    <ClInclude Include="CollisionSystem.h" />
+    <ClInclude Include="Director.h" />
+    <ClInclude Include="EventBus.h" />
+    <ClInclude Include="EventHandler.h" />
+    <ClInclude Include="Events.h" />
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
+    <ClInclude Include="Guns.h" />
+    <ClInclude Include="HealthComponent.h" />
+    <ClInclude Include="IControllable.h" />
     <ClInclude Include="Init.h" />
+    <ClInclude Include="InputSystem.h" />
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LineVisualizer.h" />
+    <ClInclude Include="PhysicalActor2D.h" />
+    <ClInclude Include="PlayerController.h" />
+    <ClInclude Include="Physics.h" />
     <ClInclude Include="Projectile.h" />
     <ClInclude Include="PostProcessRenderer.h" />
+    <ClInclude Include="ProjectileSystem.h" />
     <ClInclude Include="PulseEffectRenderer.h" />
+    <ClInclude Include="Services.h" />
     <ClInclude Include="ship.h" />
+    <ClInclude Include="ShipFactory.h" />
+    <ClInclude Include="SimpleShootingAi.h" />
+    <ClInclude Include="SoundManager.h" />
     <ClInclude Include="SpriteRenderer.h" />
+    <ClInclude Include="TeamRules.h" />
     <ClInclude Include="TextRenderer.h" />
     <ClInclude Include="Transform2D.h" />
     <ClInclude Include="GamepadInput.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Util.h" />
+    <ClInclude Include="Weapon.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\a_idle.png" />
