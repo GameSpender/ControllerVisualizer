@@ -21,6 +21,9 @@ public:
 			if (shot.projectileType == "laser_shot") {
 				Services::sound->play(shot.soundName);
 			}
+			else if (shot.projectileType == "enemy_shot") {
+				Services::sound->play(shot.soundName);
+			}
 		});
 
 		Services::eventBus->process<SoundEvent>([&](const SoundEvent sound) {

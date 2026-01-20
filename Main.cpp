@@ -309,12 +309,12 @@ int main()
 		playerController.update(dt);
 		player2Controller.update(dt);
 
-		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->velocity);
+		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->getVelocity());
         //aiController.setTarget(enemyship->getWorldPosition(), enemyship->velocity);
 		aiController.update(dt);
 
 		//printf("Player 1 Pos: (%.2f, %.2f) Vel: (%.2f, %.2f)\n", playerShip->position.x, playerShip->position.y, playerShip->physics.velocity.x, playerShip->physics.velocity.y);
-
+        
         playerShip->update(dt);
         player2Ship->update(dt);
         enemyship->update(dt);

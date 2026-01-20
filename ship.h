@@ -52,9 +52,9 @@ public:
     std::unordered_map<int, std::vector<std::shared_ptr<Hardpoint>>> actionMap;
 
     Ship() {
-        physics.mass = 10.0f;
-        physics.friction = 0.1f;
-        physics.angularFriction = 1.0f;
+        physics->mass = 10.0f;
+        physics->friction = 0.1f;
+        physics->angularFriction = 1.0f;
 
         health = addComponent<HealthComponent>(100.0f, 10.0f, 0);
 
@@ -83,8 +83,7 @@ public:
             float rotThrust = applyRotationThrust(targetRot, thrustDir, dt);
         }
 
-
-        physics.integrate(*this, static_cast<float>(dt));
+		PhysicalActor2D::update(dt);
 
         if (screenMin != screenMax)
             borderCollision(screenMin, screenMax, 0.5f, -0.06f);
@@ -163,14 +162,14 @@ private:
         glm::vec2 forwardDir = forward();
         glm::vec2 thrustWorld = direction * baseThrust;
 
-        float speed = glm::length(velocity);
+        float speed = glm::length(getVelocity());
         float totalMultiplier = 1.0f;
 
         float forwardAlignment = glm::dot(thrustDirNorm, forwardDir);
         if (forwardAlignment > 0.0f) totalMultiplier += forwardAlignment * bonusThrustMultiplier;
 
         if (speed > 0.001f) {
-            glm::vec2 velDir = glm::normalize(velocity);
+            glm::vec2 velDir = glm::normalize(getVelocity());
             float brakingAlignment = glm::dot(thrustDirNorm, -velDir);
             if (brakingAlignment > 0.0f) totalMultiplier += brakingAlignment * bonusBrakingMultiplier * glm::max(0.0f, forwardAlignment);
         }
@@ -192,7 +191,7 @@ private:
         if (angleDiff < 0.0f) angleDiff += glm::two_pi<float>();
         angleDiff -= glm::pi<float>();
 
-        float torque = PD_p * angleDiff - PD_d * angularVelocity;
+        float torque = PD_p * angleDiff - PD_d * getAngularVelocity();
         torque = glm::clamp(torque, -rotationThrust, rotationThrust);
 
         applyTorque(torque, dt);
@@ -200,6 +199,9 @@ private:
     }
 
     void borderCollision(const glm::vec2& screenMin, const glm::vec2& screenMax, float restitution = 0.5f, float spinFactor = 0.3f) {
+		vec2 velocity = physics->velocity;
+		float angularVelocity = physics->angularVelocity;
+
         // X-axis
         if (position.x < screenMin.x) { position.x = screenMin.x; 
             if (velocity.x < 0.0f) { velocity.x = -velocity.x * restitution; angularVelocity += velocity.y * spinFactor; } }
@@ -211,6 +213,9 @@ private:
             if (velocity.y < 0.0f) { velocity.y = -velocity.y * restitution; angularVelocity -= velocity.x * spinFactor; } }
         else if (position.y > screenMax.y) { position.y = screenMax.y; 
             if (velocity.y > 0.0f) { velocity.y = -velocity.y * restitution; angularVelocity += velocity.x * spinFactor; } }
+
+		physics->velocity = velocity;
+		physics->angularVelocity = angularVelocity;
     }
 
 

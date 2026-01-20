@@ -1,5 +1,6 @@
 #pragma once
 #include "glm/glm.hpp"
+#include "BaseComponent.h"
 
 
 class PhysicalActor2D;
@@ -28,18 +29,24 @@ public:
 
 
 // --- Physics data / integrator ---
-class PhysicsComponent {
+class PhysicsComponent : public BaseComponent{
 public:
     float mass = 5.0f;
-    float friction = 0.0f;
-    float angularFriction = 0.0f;
+    float friction = 0.5f;
+    float angularFriction = 0.5f;
+
+
+    bool isKinematic = false; // true = ignore forces/torque
+    glm::vec2 velocity{ 0.0f };
+    float angularVelocity{ 0.0f };
 
     PhysicsComponent() = default;
 
-    void integrate(PhysicalActor2D& actor, double dt, bool isKinematic = false);
-    void applyForce(PhysicalActor2D& actor, const glm::vec2& force, double dt);
-    void applyTorque(PhysicalActor2D& actor, float torque, double dt);
-    void applyImpulse(PhysicalActor2D& actor, const glm::vec2& impulse);
-    void applyAngularImpulse(PhysicalActor2D& actor, float impulse);
-    void reset(PhysicalActor2D& actor);
+    //void integrate(double dt, bool isKinematic = false);
+    void update(double dt) override;
+    void applyForce(const glm::vec2& force, double dt);
+    void applyTorque(float torque, double dt);
+    void applyImpulse(const glm::vec2& impulse);
+    void applyAngularImpulse(float impulse);
+    void reset();
 };

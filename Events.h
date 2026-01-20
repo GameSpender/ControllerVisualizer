@@ -10,7 +10,6 @@ struct MoveEvent {
     float speed;
 };
 
-
 struct ShootEvent {
     vec2 position;             // world position of muzzle
     vec2 direction;            // normalized firing direction
@@ -28,3 +27,18 @@ struct SoundEvent {
     float startTime = 0.0f;         // optional playback offset
 };
 
+struct DamageEvent {
+    void* target = nullptr; // pointer to the owning actor/component
+    float amount = 0.0f;
+    int team = 0;
+};
+
+struct DeathEvent {
+    void* target = nullptr;
+    int team = 0;
+};
+
+struct RespawnEvent {
+    void* target = nullptr;
+    int team = 0;
+};

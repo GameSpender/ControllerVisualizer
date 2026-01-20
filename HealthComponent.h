@@ -3,22 +3,7 @@
 #include "glm/glm.hpp"
 #include "Services.h"
 #include "EventBus.h"
-
-struct DamageEvent {
-    void* target = nullptr; // pointer to the owning actor/component
-    float amount = 0.0f;
-    int team = 0;
-};
-
-struct DeathEvent {
-    void* target = nullptr;
-    int team = 0;
-};
-
-struct RespawnEvent {
-    void* target = nullptr;
-    int team = 0;
-};
+#include <string>
 
 class HealthComponent : public BaseComponent {
 public:
@@ -34,22 +19,33 @@ public:
 
     // Apply damage with optional source
     void applyDamage(float amount, void* source = nullptr) {
+        if (!owner) return;
+
+        if (health < 0) return;
+
         float actual = glm::max(0.0f, amount - armor);
         if (actual <= 0.0f) return;
 
         health -= actual;
 
-        // Emit damage event
         if (Services::eventBus) {
-            DamageEvent e{ source, actual, team };
+            DamageEvent e;
+            e.target = owner;
+            e.amount = actual;
+            e.team = team;
+
             Services::eventBus->emit<DamageEvent>(e);
         }
 
         // Emit death event if health drops to zero
         if (health <= 0.0f) {
             health = 0.0f;
+
             if (Services::eventBus) {
-                DeathEvent e{ source, team };
+                DeathEvent e;
+                e.target = owner;
+                e.team = team;
+
                 Services::eventBus->emit<DeathEvent>(e);
             }
         }
@@ -68,11 +64,15 @@ public:
         return health <= 0.0f;
     }
 
-    // Respawn and emit event
     void respawn() {
+        if (!owner) return;
+
         health = maxHealth;
+
         if (Services::eventBus) {
-            RespawnEvent e{ this, team };
+            RespawnEvent e;
+            e.target = owner;
+            e.team = team;
             Services::eventBus->emit<RespawnEvent>(e);
         }
     }

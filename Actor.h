@@ -4,8 +4,8 @@
 #include "InputSystem.h"
 #include <string>
 #include <typeindex>
+#include "BaseComponent.h"
 
-class BaseComponent;
 
 class Actor2D : public Transform2D {
 public:
@@ -17,13 +17,30 @@ public:
 
     template <typename T, typename... Args>
     std::shared_ptr<T> addComponent(Args&&... args) {
+        static_assert(std::is_base_of<BaseComponent, T>::value,
+            "T must inherit BaseComponent");
+
         auto comp = std::make_shared<T>(std::forward<Args>(args)...);
+        comp->owner = this;
         components.push_back(comp);
         return comp;
     }
 
     template <typename T>
-    std::shared_ptr<T> getComponent() {
+    void removeComponent() {
+        components.erase(
+            std::remove_if(
+                components.begin(),
+                components.end(),
+                [&](const std::shared_ptr<BaseComponent>& c) {
+                    return dynamic_cast<T*>(c.get()) != nullptr;
+                }),
+            components.end()
+        );
+    }
+
+    template <typename T>
+    std::shared_ptr<T> getComponent(){
         for (auto& c : components) {
             if (auto t = std::dynamic_pointer_cast<T>(c))
                 return t;
