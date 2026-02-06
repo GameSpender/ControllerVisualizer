@@ -185,12 +185,14 @@
     <ClInclude Include="Init.h" />
     <ClInclude Include="InputSystem.h" />
     <ClInclude Include="InteractionInterfaces.h" />
+    <ClInclude Include="LightManager.h" />
     <ClInclude Include="LineVisualizer.h" />
     <ClInclude Include="ModelImporter.h" />
     <ClInclude Include="ModelRenderer.h" />
     <ClInclude Include="PhysicalActor2D.h" />
     <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Physics.h" />
+    <ClInclude Include="Light.h" />
     <ClInclude Include="Projectile.h" />
     <ClInclude Include="PostProcessRenderer.h" />
     <ClInclude Include="ProjectileSystem.h" />

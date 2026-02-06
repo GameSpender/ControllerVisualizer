@@ -3,7 +3,6 @@
 
 
 
-
 class LaserGun : public Weapon {
     bool firing = false;
 

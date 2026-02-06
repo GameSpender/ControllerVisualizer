@@ -5,11 +5,11 @@
 
 #include "Services.h" // For texture loading
 #include "AssetManager.h"
+#include "LightManager.h"
 
 class ModelRenderer {
 public:
     GLuint shader;
-    glm::vec3 ambientColor = glm::vec3(0.1f); // default ambient light
 
     ModelRenderer(GLuint shaderProgram)
         : shader(shaderProgram) {
@@ -27,9 +27,38 @@ public:
 
         // Set camera uniform
         glUniform3fv(glGetUniformLocation(shader, "uCameraPos"), 1, glm::value_ptr(cameraPos));
+        
+        vec3 ambientColor = vec3(0.01f);
+        if (Services::lights) {
+            ambientColor = Services::lights->ambientColor;
+        }
 
         // Set ambient light uniform
         glUniform3fv(glGetUniformLocation(shader, "uAmbientColor"), 1, glm::value_ptr(ambientColor));
+
+        // Before drawing meshes:
+		auto activeLights = Services::lights->getActiveLights();
+        int numPointLights = 0;
+
+        for (int i = 0; i < activeLights.size(); ++i) {
+            auto pl = std::dynamic_pointer_cast<PointLight2D>(activeLights[i]);
+            if (!pl) continue; // Skip if not a PointLight
+            if (numPointLights >= 50) continue;
+
+            std::string prefix = "uPointLights[" + std::to_string(i) + "].";
+
+            glUniform3fv(glGetUniformLocation(shader, (prefix + "position").c_str()), 1, glm::value_ptr(pl->position));
+            glUniform3fv(glGetUniformLocation(shader, (prefix + "color").c_str()), 1, glm::value_ptr(pl->color));
+            glUniform1f(glGetUniformLocation(shader, (prefix + "intensity").c_str()), pl->intensity);
+            glUniform1f(glGetUniformLocation(shader, (prefix + "range").c_str()), pl->range);
+            glUniform1f(glGetUniformLocation(shader, (prefix + "falloff").c_str()), pl->falloff);
+
+
+            numPointLights++;
+        }
+
+        glUniform1i(glGetUniformLocation(shader, "uNumPointLights"), numPointLights);
+
 
         for (const auto& mesh : model->meshes)
         {

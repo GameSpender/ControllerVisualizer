@@ -10,6 +10,7 @@
 
 #include "SpriteRenderer.h"
 #include "ModelRenderer.h"
+#include "LightManager.h"
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -92,6 +93,17 @@ int main()
 	unsigned int Shader3D = createShader("shaders/3dColor.vert", "shaders/3dColor.frag");
 
     glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -100.0f, 1.0f);
+
+
+    glm::vec3 cameraPos(screenWidth / 2, screenHeight / 2, 500.0f);
+    glm::vec3 target(screenWidth / 2, screenHeight / 2, 0.0f);
+    glm::vec3 up(0, 1, 0);
+
+    glm::mat4 view = glm::lookAt(cameraPos, target, up);
+
+
+
+
     glUseProgram(rectShader);
     glUniformMatrix4fv(glGetUniformLocation(rectShader, "uProjection"), 1, GL_FALSE, glm::value_ptr(projection));
     glUseProgram(pulseShader);
@@ -105,15 +117,11 @@ int main()
 	SpriteRenderer spriteRenderer(rectShader);
 	ModelRenderer modelRenderer(Shader3D);
 
-	modelRenderer.ambientColor = glm::vec3(0.3f); // slightly brighter ambient light for 3D models
-
     LineVisualizer directionLine(
         glm::vec2(0, 0),
         glm::vec2(1, 0),
         glm::vec3(1, 0, 0)   // red
     );
-
-
 
 
 
@@ -148,7 +156,8 @@ int main()
 		new SoundManager,
         new EventHandler,
 		new ProjectileSystem,
-        new CollisionSystem
+        new CollisionSystem,
+        new LightManager
     );
 
 
@@ -163,7 +172,7 @@ int main()
 
 	//Services::assets->loadModel("test_box", "res/models/box01.glb");
     //Services::assets->loadModel("plane", "res/models/plane.glb");
-    Services::assets->loadModel("plane", "res/models/plane/plane.obj");
+    Services::assets->loadModel("plane", "res/models/plane/plane.gltf");
 
 	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
 	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");
@@ -270,6 +279,20 @@ int main()
 	playerController.possess(playerShip.get());
 	player2Controller.possess(player2Ship.get());
     aiController.possess(enemyship.get());
+
+
+    Services::lights->ambientColor = glm::vec3(0.05f); // slightly brighter ambient light for 3D models
+
+	PointLight2D pointLight;
+	pointLight.position = vec3(screenWidth/2, screenHeight/2, 100);
+	pointLight.color = vec3(1.0f, 0.8f, 0.6f);
+    pointLight.intensity = 6.0f;
+	pointLight.range = 2000.0f;
+	auto light = std::make_shared<PointLight2D>(pointLight);
+	Services::lights->addLight(light);
+
+    
+
 
     std::shared_ptr<GamepadObject> gamepadVisualizer = std::make_shared<GamepadObject>();
     gamepadVisualizer->initHiearchy();
@@ -397,7 +420,7 @@ int main()
 			modelMat = glm::rotate(modelMat, glm::degrees(-90.0f), glm::vec3(1, 0, 0));
 			//modelMat = glm::rotate(modelMat, debugRotation, glm::vec3(1, 0, 1));
 			//modelMat = glm::scale(modelMat, glm::vec3(0.12f));
-            modelMat = glm::scale(modelMat, glm::vec3(0.6f));
+            modelMat = glm::scale(modelMat, glm::vec3(0.2f));
 			//modelMat = glm::translate(modelMat, glm::vec3(1.0f, 1.0f, 0.0f));
 
             //// Now draw
@@ -413,7 +436,7 @@ int main()
                 modelMat,
                 mat4(1.0f),
                 projection,
-                vec3(0.0f)
+                cameraPos
 			);
 
 

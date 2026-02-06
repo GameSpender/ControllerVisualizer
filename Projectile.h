@@ -12,6 +12,7 @@
 
 #include "TeamRules.h"
 #include "HealthComponent.h"
+#include "Light.h"
 
 using namespace glm;
 
@@ -21,7 +22,6 @@ public:
     vec2 velocity;         // world-space velocity
     float lifetime; // seconds
     int team;
-
    
 
     Projectile() = default;
@@ -41,6 +41,8 @@ public:
             this->hitSomething(other ? dynamic_cast<Transform2D*>(other->parent.lock().get()) : nullptr);
             };
         Services::collisions->addCollider(collider);
+
+
     }
 
     virtual void hitSomething(Transform2D* other) {
@@ -59,6 +61,8 @@ class LaserProjectile : public Projectile {
 public:
     float damage = 0.0f;
     float knockbackScale = 1.0f / 100.0f;
+
+
 
     // Constructor with all needed parameters
     LaserProjectile(vec2 startPos, vec2 velocity, float lifetime, float damage, int team, Transform2D* owner = nullptr)
