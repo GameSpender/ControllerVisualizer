@@ -105,6 +105,8 @@ int main()
 	SpriteRenderer spriteRenderer(rectShader);
 	ModelRenderer modelRenderer(Shader3D);
 
+	modelRenderer.ambientColor = glm::vec3(0.3f); // slightly brighter ambient light for 3D models
+
     LineVisualizer directionLine(
         glm::vec2(0, 0),
         glm::vec2(1, 0),
@@ -159,8 +161,9 @@ int main()
 	Services::assets->loadTexture("bullet_shot", "res/bullet.png");
 	Services::assets->loadTexture("enemy_shot", "res/enemy_projectile.png");
 
-	Services::assets->loadModel("test_box", "res/models/box01.glb");
-    Services::assets->loadModel("plane", "res/models/plane.glb");
+	//Services::assets->loadModel("test_box", "res/models/box01.glb");
+    //Services::assets->loadModel("plane", "res/models/plane.glb");
+    Services::assets->loadModel("plane", "res/models/plane/plane.obj");
 
 	Services::sound->loadSound("laser_shot", "assets/shoot.wav");
 	Services::sound->loadSound("minigun_spool", "assets/minigun_spool.wav");

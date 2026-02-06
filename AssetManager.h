@@ -42,11 +42,27 @@ public:
     void loadModel(const std::string& name, const std::string& filePath) {
         if (models.find(name) != models.end()) return;
 
-        auto model = ModelImporter::loadModel(filePath);
+		std::string directory = filePath.substr(0, filePath.find_last_of("/\\") + 1);
+		std::string filename = filePath.substr(filePath.find_last_of("/\\") + 1);
+		std::cout << "Loading model: " << directory + filename << std::endl;
+
+        auto model = ModelImporter::loadModel(directory, filename);
         if (!model) {
             std::cerr << "Failed to load model: " << filePath << std::endl;
             return;
         }
+
+        for (const auto& mesh : model->meshes) {
+            // Preload all textures used by the model
+            if (!mesh->material.baseColorKey.empty())
+                loadTexture(mesh->material.baseColorKey, directory + mesh->material.baseColorKey);
+            if (!mesh->material.metallicKey.empty())
+                loadTexture(mesh->material.metallicKey, directory + mesh->material.metallicKey);
+            if (!mesh->material.roughnessKey.empty())
+                loadTexture(mesh->material.roughnessKey, directory + mesh->material.roughnessKey);
+            if (!mesh->material.emissiveKey.empty())
+                loadTexture(mesh->material.emissiveKey, directory + mesh->material.emissiveKey);
+		}
 
         std::cout << "Loaded model: " << filePath << std::endl;
         models[name] = std::move(model);

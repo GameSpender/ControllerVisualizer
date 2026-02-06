@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <assimp/scene.h>
 
+
 /* --------------------------
    Engine-side types
 -------------------------- */
@@ -14,21 +15,21 @@ struct Vertex {
     glm::vec3 position{};
     glm::vec3 normal{};
     glm::vec2 texCoord{};
-    glm::vec3 tangent{};
 };
 
-struct Material {
-    GLuint albedoTexture = 0;
-    GLuint normalTexture = 0;
-    GLuint metallicRoughnessTexture = 0;
-    GLuint occlusionTexture = 0;
-    GLuint emissiveTexture = 0;
 
-    glm::vec4 baseColor = { 1,1,1,1 };
+struct Material {
+    std::string baseColorKey;
+    std::string metallicKey;
+    std::string roughnessKey;
+    std::string emissiveKey;
+
+    glm::vec4 baseColorFactor = { 1,1,1,1 };
     float metallicFactor = 1.0f;
     float roughnessFactor = 1.0f;
     glm::vec3 emissiveFactor = { 0,0,0 };
 };
+
 
 class Mesh {
 public:
@@ -45,8 +46,7 @@ public:
 class Model {
 public:
     std::vector<std::unique_ptr<Mesh>> meshes;
-    // Texture cache for embedded textures
-    std::unordered_map<std::string, GLuint> textureCache;
+	std::string directory; // Directory of the model file for resolving external textures
 };
 
 /* --------------------------
@@ -55,20 +55,21 @@ public:
 class ModelImporter {
 public:
     // Load a model from file (.glb/.gltf/.obj etc.)
-    static std::unique_ptr<Model> loadModel(const std::string& path);
+    static std::unique_ptr<Model> loadModel(const std::string& path, const std::string& name);
+	static void printMaterialDebug(const aiMaterial* material);
 
 private:
     // Recursive node traversal
     static void processNode(const aiNode* node, const aiScene* scene, Model& model, const glm::mat4& parentTransform);
 
     // Process a single mesh
-    static std::unique_ptr<Mesh> processMesh(const aiMesh* mesh, const aiScene* scene, Model& model);
+    static std::unique_ptr<Mesh> processMesh(const aiMesh* mesh, const aiScene* scene);
 
-    // Load a texture from material (handles embedded GLB textures)
-    static GLuint loadTextureFromMaterial(const aiMaterial* material, aiTextureType type, const aiScene* scene, Model& model);
+    // Load a texture from material
+    static std::string getTextureKeyFromMaterial(const aiMaterial* material, aiTextureType type);
 
     // Load a texture directly from an embedded aiTexture
-    static GLuint loadEmbeddedTexture(const aiTexture* texture, const std::string& key);
+    //static GLuint loadEmbeddedTexture(const aiTexture* texture, const std::string& key);
 
     // Convert Assimp matrix to glm::mat4
     static glm::mat4 aiMatToGlm(const aiMatrix4x4& mat);

@@ -23,77 +23,107 @@ glm::mat4 ModelImporter::aiMatToGlm(const aiMatrix4x4& a) {
     );
 }
 
-GLuint ModelImporter::loadEmbeddedTexture(const aiTexture* tex, const std::string& key) {
-    GLuint texID = 0;
-    if (!tex) return 0;
 
-    glGenTextures(1, &texID);
-    glBindTexture(GL_TEXTURE_2D, texID);
+void ModelImporter::printMaterialDebug(const aiMaterial* mat) {
+    if (!mat) return;
 
-    if (tex->mHeight == 0) {
-        // Compressed image (PNG/JPG)
-        int width, height, channels;
-        unsigned char* data = stbi_load_from_memory(
-            reinterpret_cast<const unsigned char*>(tex->pcData),
-            tex->mWidth,
-            &width, &height, &channels, 0
-        );
-        if (!data) {
-            std::cerr << "Failed to load embedded texture " << key << std::endl;
-            glDeleteTextures(1, &texID);
-            return 0;
+    std::cout << "=== Material Debug ===" << std::endl;
+
+    // Print textures
+    for (int type = aiTextureType_NONE; type <= aiTextureType_UNKNOWN; ++type) {
+        int count = mat->GetTextureCount(static_cast<aiTextureType>(type));
+        if (count == 0) continue;
+
+        std::cout << "Texture type " << type << " count: " << count << std::endl;
+        for (int i = 0; i < count; ++i) {
+            aiString path;
+            if (mat->GetTexture(static_cast<aiTextureType>(type), i, &path) == AI_SUCCESS) {
+                std::cout << "  Texture " << i << ": " << path.C_Str() << std::endl;
+            }
         }
-
-        GLint format = (channels == 4) ? GL_RGBA : (channels == 3) ? GL_RGB : GL_RED;
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-        stbi_image_free(data);
-    }
-    else {
-        // Raw RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->mWidth, tex->mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex->pcData);
     }
 
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    // Print diffuse/base color
+    aiColor4D diff;
+    if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_DIFFUSE, diff)) {
+        std::cout << "Diffuse color: " << diff.r << ", " << diff.g << ", " << diff.b << ", " << diff.a << std::endl;
+    }
 
-    return texID;
+    // Print emissive
+    aiColor4D emi;
+    if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_EMISSIVE, emi)) {
+        std::cout << "Emissive color: " << emi.r << ", " << emi.g << ", " << emi.b << std::endl;
+    }
+
+    // Print metallic/roughness factors
+    float metallic = 1.0f, roughness = 1.0f;
+    mat->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
+    mat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+    std::cout << "Metallic: " << metallic << ", Roughness: " << roughness << std::endl;
+
+    std::cout << "======================" << std::endl;
 }
 
-GLuint ModelImporter::loadTextureFromMaterial(const aiMaterial* material, aiTextureType type, const aiScene* scene, Model& model) {
-    if (!material) return 0;
+
+//GLuint ModelImporter::loadEmbeddedTexture(const aiTexture* tex, const std::string& key) {
+//    GLuint texID = 0;
+//    if (!tex) return 0;
+//
+//    glGenTextures(1, &texID);
+//    glBindTexture(GL_TEXTURE_2D, texID);
+//
+//    if (tex->mHeight == 0) {
+//        // Compressed image (PNG/JPG)
+//        int width, height, channels;
+//        unsigned char* data = stbi_load_from_memory(
+//            reinterpret_cast<const unsigned char*>(tex->pcData),
+//            tex->mWidth,
+//            &width, &height, &channels, 0
+//        );
+//        if (!data) {
+//            std::cerr << "Failed to load embedded texture " << key << std::endl;
+//            glDeleteTextures(1, &texID);
+//            return 0;
+//        }
+//
+//        GLint format = (channels == 4) ? GL_RGBA : (channels == 3) ? GL_RGB : GL_RED;
+//        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+//        stbi_image_free(data);
+//    }
+//    else {
+//        // Raw RGBA
+//        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->mWidth, tex->mHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex->pcData);
+//    }
+//
+//    glGenerateMipmap(GL_TEXTURE_2D);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+//    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//    glBindTexture(GL_TEXTURE_2D, 0);
+//
+//    return texID;
+//}
+
+
+// Get texture key (just the filename) from material
+std::string ModelImporter::getTextureKeyFromMaterial(
+    const aiMaterial* material,
+    aiTextureType type)
+{
+    if (!material) return "";
 
     aiString path;
-    if (material->GetTexture(type, 0, &path) != AI_SUCCESS) return 0;
-    std::string key = path.C_Str();
+    if (material->GetTexture(type, 0, &path) != AI_SUCCESS)
+        return "";
 
-    // Already loaded?
-    if (model.textureCache.count(key)) return model.textureCache[key];
-
-    GLuint texID = 0;
-
-    if (!key.empty() && key[0] == '*') {
-        int idx = std::stoi(key.substr(1));
-        if (idx >= 0 && idx < (int)scene->mNumTextures) {
-            texID = loadEmbeddedTexture(scene->mTextures[idx], key);
-        }
-    }
-    else {
-        // Optional: fallback for external files
-        // texID = loadTextureFromFile(key);
-    }
-
-    if (texID) model.textureCache[key] = texID;
-    return texID;
+    return std::string(path.C_Str()); // just the key/filename
 }
 
-/* --------------------------
-   Process a single mesh
--------------------------- */
-std::unique_ptr<Mesh> ModelImporter::processMesh(const aiMesh* mesh, const aiScene* scene, Model& model) {
+std::unique_ptr<Mesh> ModelImporter::processMesh(
+    const aiMesh* mesh,
+    const aiScene* scene)
+{
     auto outMesh = std::make_unique<Mesh>();
 
     std::vector<Vertex> vertices(mesh->mNumVertices);
@@ -106,8 +136,6 @@ std::unique_ptr<Mesh> ModelImporter::processMesh(const aiMesh* mesh, const aiSce
             v.normal = { mesh->mNormals[i].x, mesh->mNormals[i].y, mesh->mNormals[i].z };
         if (mesh->HasTextureCoords(0))
             v.texCoord = { mesh->mTextureCoords[0][i].x, 1.0f - mesh->mTextureCoords[0][i].y };
-        if (mesh->HasTangentsAndBitangents())
-            v.tangent = { mesh->mTangents[i].x, mesh->mTangents[i].y, mesh->mTangents[i].z };
         vertices[i] = v;
     }
 
@@ -118,7 +146,7 @@ std::unique_ptr<Mesh> ModelImporter::processMesh(const aiMesh* mesh, const aiSce
 
     outMesh->indexCount = static_cast<GLsizei>(indices.size());
 
-    // Setup OpenGL buffers
+    // OpenGL buffer setup remains the same
     glGenVertexArrays(1, &outMesh->vao);
     glGenBuffers(1, &outMesh->vbo);
     glGenBuffers(1, &outMesh->ebo);
@@ -132,33 +160,50 @@ std::unique_ptr<Mesh> ModelImporter::processMesh(const aiMesh* mesh, const aiSce
 
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0);
+
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, normal));
+
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
 
     glBindVertexArray(0);
 
     // -------------------------
-    // Load material + textures
+    // Material (store keys only)
     // -------------------------
     if (mesh->mMaterialIndex >= 0 && scene->mMaterials) {
         const aiMaterial* mat = scene->mMaterials[mesh->mMaterialIndex];
-        outMesh->material.albedoTexture = loadTextureFromMaterial(mat, aiTextureType_DIFFUSE, scene, model);
-        outMesh->material.normalTexture = loadTextureFromMaterial(mat, aiTextureType_NORMALS, scene, model);
-        outMesh->material.metallicRoughnessTexture = loadTextureFromMaterial(mat, aiTextureType_METALNESS, scene, model);
-        outMesh->material.occlusionTexture = loadTextureFromMaterial(mat, aiTextureType_AMBIENT_OCCLUSION, scene, model);
-        outMesh->material.emissiveTexture = loadTextureFromMaterial(mat, aiTextureType_EMISSIVE, scene, model);
+        printMaterialDebug(mat);
 
-        aiColor4D baseColor;
-        if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_DIFFUSE, baseColor))
-            outMesh->material.baseColor = glm::vec4(baseColor.r, baseColor.g, baseColor.b, baseColor.a);
+        outMesh->material.baseColorKey = getTextureKeyFromMaterial(mat, aiTextureType_DIFFUSE);
+        outMesh->material.metallicKey = getTextureKeyFromMaterial(mat, aiTextureType_METALNESS);
+        outMesh->material.roughnessKey = getTextureKeyFromMaterial(mat, aiTextureType_DIFFUSE_ROUGHNESS);
+        outMesh->material.emissiveKey = getTextureKeyFromMaterial(mat, aiTextureType_EMISSIVE);
+
+        float metallic = 1.0f;
+        float roughness = 1.0f;
+        aiColor4D color(1.f, 1.f, 1.f, 1.f);
+
+        mat->Get(AI_MATKEY_METALLIC_FACTOR, metallic);
+        mat->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness);
+		mat->Get(AI_MATKEY_COLOR_DIFFUSE, color);
+
+        outMesh->material.metallicFactor = metallic;
+        outMesh->material.roughnessFactor = roughness;
+		outMesh->material.baseColorFactor = glm::vec4(color.r, color.g, color.b, color.a);
+		
+
+
+        aiColor3D emissive(0.f, 0.f, 0.f);
+        if (AI_SUCCESS == mat->Get(AI_MATKEY_COLOR_EMISSIVE, emissive))
+            outMesh->material.emissiveFactor = glm::vec3(emissive.r, emissive.g, emissive.b);
     }
 
     return outMesh;
 }
+
+
 
 /* --------------------------
    Recursive node traversal
@@ -168,7 +213,7 @@ void ModelImporter::processNode(const aiNode* node, const aiScene* scene, Model&
 
     for (unsigned int i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        auto m = processMesh(mesh, scene, model);
+        auto m = processMesh(mesh, scene);
         m->transform = nodeTransform;
         model.meshes.push_back(std::move(m));
     }
@@ -180,14 +225,12 @@ void ModelImporter::processNode(const aiNode* node, const aiScene* scene, Model&
 /* --------------------------
    Main import function
 -------------------------- */
-std::unique_ptr<Model> ModelImporter::loadModel(const std::string& path) {
+std::unique_ptr<Model> ModelImporter::loadModel(const std::string& path, const std::string& name) {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
-        path,
+        path + name,
         aiProcess_Triangulate |
-        aiProcess_GenSmoothNormals |
-        aiProcess_FlipUVs |
-        aiProcess_CalcTangentSpace
+        aiProcess_GenSmoothNormals
     );
 
     if (!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
@@ -196,6 +239,7 @@ std::unique_ptr<Model> ModelImporter::loadModel(const std::string& path) {
     }
 
     auto model = std::make_unique<Model>();
+    model.get()->directory = path;
     processNode(scene->mRootNode, scene, *model, glm::mat4(1.0f));
     return model;
 }

@@ -3,11 +3,13 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-#include "ModelImporter.h" // Model + Mesh + Material
+#include "Services.h" // For texture loading
+#include "AssetManager.h"
 
 class ModelRenderer {
 public:
     GLuint shader;
+    glm::vec3 ambientColor = glm::vec3(0.1f); // default ambient light
 
     ModelRenderer(GLuint shaderProgram)
         : shader(shaderProgram) {
@@ -16,7 +18,9 @@ public:
     // ------------------------------------
     // Draw a model with per-mesh transforms
     // ------------------------------------
-    void Draw(const Model* model, const glm::mat4& rootTransform, const glm::mat4& view, const glm::mat4& proj, const glm::vec3& cameraPos) const {
+    void Draw(const Model* model, const glm::mat4& rootTransform, const glm::mat4& view,
+        const glm::mat4& proj, const glm::vec3& cameraPos) const
+    {
         if (!model) return;
 
         glUseProgram(shader);
@@ -24,35 +28,42 @@ public:
         // Set camera uniform
         glUniform3fv(glGetUniformLocation(shader, "uCameraPos"), 1, glm::value_ptr(cameraPos));
 
-        for (const auto& mesh : model->meshes) {
-            // -------------------------
-            // Compute MVP with mesh transform
-            // -------------------------
-            glm::mat4 mvp = proj * view * rootTransform * mesh->transform;
+        // Set ambient light uniform
+        glUniform3fv(glGetUniformLocation(shader, "uAmbientColor"), 1, glm::value_ptr(ambientColor));
+
+        for (const auto& mesh : model->meshes)
+        {
+            glm::mat4 modelMatrix = rootTransform * mesh->transform;
+            glm::mat4 mvp = proj * view * modelMatrix;
+
             glUniformMatrix4fv(glGetUniformLocation(shader, "uMVP"), 1, GL_FALSE, glm::value_ptr(mvp));
+            glUniformMatrix4fv(glGetUniformLocation(shader, "uModel"), 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-            // -------------------------
-            // Bind textures
-            // -------------------------
+            // --- Bind base color texture if available ---
+            glUniform1i(glGetUniformLocation(shader, "uHasBaseColorTex"),
+                !mesh->material.baseColorKey.empty() ? 1 : 0);
+            if (!mesh->material.baseColorKey.empty()) {
+                bindTexture(mesh->material.baseColorKey, model->directory, "uBaseColorTex", 0);
+            }
+            else {
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, 0);
+                glUniform1i(glGetUniformLocation(shader, "uBaseColorTex"), 0);   
+            }
 
-            glUniform1i(glGetUniformLocation(shader, "uUseTex"), GL_TRUE);
-            bindTexture(mesh->material.albedoTexture, "uAlbedoTex", 0);
-            bindTexture(mesh->material.metallicRoughnessTexture, "uMetallicRoughnessTex", 1);
-            bindTexture(mesh->material.normalTexture, "uNormalTex", 2);
-            bindTexture(mesh->material.occlusionTexture, "uOcclusionTex", 3);
-            bindTexture(mesh->material.emissiveTexture, "uEmissiveTex", 4);
+            // --- Set scalar factors ---
+            glUniform4fv(glGetUniformLocation(shader, "uBaseColorFactor"), 1,
+                glm::value_ptr(mesh->material.baseColorFactor));
 
-            // -------------------------
-            // Set PBR uniforms
-            // -------------------------
-            glUniform4fv(glGetUniformLocation(shader, "uBaseColor"), 1, glm::value_ptr(mesh->material.baseColor));
-            glUniform1f(glGetUniformLocation(shader, "uMetallic"), mesh->material.metallicFactor);
-            glUniform1f(glGetUniformLocation(shader, "uRoughness"), mesh->material.roughnessFactor);
-            glUniform3fv(glGetUniformLocation(shader, "uEmissive"), 1, glm::value_ptr(mesh->material.emissiveFactor));
+            glUniform1f(glGetUniformLocation(shader, "uMetallicFactor"),
+                mesh->material.metallicFactor);
 
-            // -------------------------
-            // Draw mesh
-            // -------------------------
+            glUniform1f(glGetUniformLocation(shader, "uRoughnessFactor"),
+                mesh->material.roughnessFactor);
+
+            glUniform3fv(glGetUniformLocation(shader, "uEmissiveFactor"), 1,
+                glm::value_ptr(mesh->material.emissiveFactor));
+
             glBindVertexArray(mesh->vao);
             glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, nullptr);
         }
@@ -62,13 +73,21 @@ public:
     }
 
 private:
-    // -------------------------
-    // Helper: bind texture if valid
-    // -------------------------
-    void bindTexture(GLuint tex, const char* uniformName, GLuint slot) const {
-        if (tex == 0) return;
+    void bindTexture(const std::string& key, const std::string& modelDirectory, const char* uniformName, GLuint slot) const {
+        if (key.empty()) return; // No texture, nothing to bind
+
+        std::string fullPath = modelDirectory + key;
+
+        Texture* tex = Services::assets->getTexture(key);
+        if (!tex) {
+            Services::assets->loadTexture(key, fullPath);
+            tex = Services::assets->getTexture(key);
+        }
+
+        if (!tex || tex->id == 0) return;
+
         glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, tex);
+        glBindTexture(GL_TEXTURE_2D, tex->id);
         glUniform1i(glGetUniformLocation(shader, uniformName), slot);
     }
 };
