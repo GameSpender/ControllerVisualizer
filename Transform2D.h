@@ -8,8 +8,6 @@
 #include <glm/gtx/transform2.hpp>  // for glm::translate(), rotate(), scale()
 #include <glm/gtx/matrix_operation.hpp>
 
-#include "SpriteRenderer.h"
-
 using namespace glm;
 
 class Transform2D : public std::enable_shared_from_this<Transform2D> {

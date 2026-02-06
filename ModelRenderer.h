@@ -59,6 +59,8 @@ public:
 
         glUniform1i(glGetUniformLocation(shader, "uNumPointLights"), numPointLights);
 
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
 
         for (const auto& mesh : model->meshes)
         {
@@ -94,6 +96,7 @@ public:
                 glm::value_ptr(mesh->material.emissiveFactor));
 
             glBindVertexArray(mesh->vao);
+
             glDrawElements(GL_TRIANGLES, mesh->indexCount, GL_UNSIGNED_INT, nullptr);
         }
 

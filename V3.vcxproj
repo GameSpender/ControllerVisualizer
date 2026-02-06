@@ -165,9 +165,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Actor.h" />
+    <ClInclude Include="Actor3D.h" />
     <ClInclude Include="AnalogStickObject.h" />
     <ClInclude Include="AssetManager.h" />
     <ClInclude Include="BaseComponent.h" />
+    <ClInclude Include="BaseComponent3D.h" />
     <ClInclude Include="BindingGenerator.h" />
     <ClInclude Include="ButtonObject.h" />
     <ClInclude Include="Collider.h" />
@@ -177,6 +179,7 @@
     <ClInclude Include="EventBus.h" />
     <ClInclude Include="EventHandler.h" />
     <ClInclude Include="Events.h" />
+    <ClInclude Include="Flat3D.h" />
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="Guns.h" />
@@ -190,6 +193,8 @@
     <ClInclude Include="ModelImporter.h" />
     <ClInclude Include="ModelRenderer.h" />
     <ClInclude Include="PhysicalActor2D.h" />
+    <ClInclude Include="PhysicalActor3D.h" />
+    <ClInclude Include="Physics3D.h" />
     <ClInclude Include="PlayerController.h" />
     <ClInclude Include="Physics.h" />
     <ClInclude Include="Light.h" />
@@ -208,6 +213,7 @@
     <ClInclude Include="Transform2D.h" />
     <ClInclude Include="GamepadInput.h" />
     <ClInclude Include="stb_image.h" />
+    <ClInclude Include="Transform3D.h" />
     <ClInclude Include="Util.h" />
     <ClInclude Include="Weapon.h" />
   </ItemGroup>

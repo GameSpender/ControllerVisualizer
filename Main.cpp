@@ -92,16 +92,19 @@ int main()
     unsigned int debugShader = createShader("shaders/color.vert", "shaders/color.frag");
 	unsigned int Shader3D = createShader("shaders/3dColor.vert", "shaders/3dColor.frag");
 
-    glm::mat4 projection = glm::ortho(0.0f, (float)mode->width, 0.0f, (float)mode->height, -100.0f, 1.0f);
-
-
-    glm::vec3 cameraPos(screenWidth / 2, screenHeight / 2, 500.0f);
+    glm::vec3 cameraPos(screenWidth / 2, screenHeight / 6, 400.0f);
     glm::vec3 target(screenWidth / 2, screenHeight / 2, 0.0f);
-    glm::vec3 up(0, 1, 0);
+    glm::vec3 up(0, 0, 1);
+
 
     glm::mat4 view = glm::lookAt(cameraPos, target, up);
 
-
+    glm::mat4 projection = glm::perspective(
+        glm::radians(60.0f),
+        (float)screenWidth / (float)screenHeight,
+        0.1f,
+        5000.0f
+    );
 
 
     glUseProgram(rectShader);
@@ -335,7 +338,7 @@ int main()
 
 		aiController.setTarget(player2Ship->getWorldPosition(), player2Ship->getVelocity());
         //aiController.setTarget(enemyship->getWorldPosition(), enemyship->velocity);
-		aiController.update(dt);
+		//aiController.update(dt);
 
 		//printf("Player 1 Pos: (%.2f, %.2f) Vel: (%.2f, %.2f)\n", playerShip->position.x, playerShip->position.y, playerShip->physics.velocity.x, playerShip->physics.velocity.y);
         
@@ -434,7 +437,7 @@ int main()
             modelRenderer.Draw(
                 Services::assets->getModel("plane"),
                 modelMat,
-                mat4(1.0f),
+                view,
                 projection,
                 cameraPos
 			);
