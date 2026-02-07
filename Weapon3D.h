@@ -1,59 +1,54 @@
 #pragma once
-#include "Actor.h"
+#include "Actor3D.h"
 #include "ProjectileSystem.h"
 #include "Events.h"
 #include <random>
-#include "Physics.h"
+#include "Physics3D.h"
 
 #include "Services.h"
 #include "EventBus.h"
 
-class Weapon : public Actor2D{
-protected:
-	
+
+// ---------------- Weapon Base ----------------
+class Weapon3D : public Actor3D {
 public:
-	double shotInterval;
-	double nextShot;
+    double shotInterval = 0.1;
+    double nextShot = 0.0;
 
-    float damage;
-    int team;
-    float deviation;
-    float recoil;
-
+    float damage = 10.0f;
+    int team = 0;
+    float deviation = 0.0f;
+    float recoil = 0.0f;
 
     virtual void startFiring() {};
     virtual void stopFiring() {};
-
 };
 
-
-class Hardpoint : public Transform2D, public PhysicsReceiver {
+// ---------------- Hardpoint ----------------
+class Hardpoint3D : public Transform3D, public PhysicsReceiver3D {
 public:
-    std::shared_ptr<Weapon> weapon;
+    std::shared_ptr<Weapon3D> weapon;
 
 private:
-    PhysicsReceiver* cachedParentReceiver = nullptr;
+    PhysicsReceiver3D* cachedParentReceiver = nullptr;
 
-    PhysicsReceiver* getParentReceiver() {
+    PhysicsReceiver3D* getParentReceiver() {
         if (cachedParentReceiver)
             return cachedParentReceiver;
 
         if (auto par = parent.lock()) {
-            if (auto receiver = dynamic_cast<PhysicsReceiver*>(par.get())) {
+            if (auto receiver = dynamic_cast<PhysicsReceiver3D*>(par.get())) {
                 cachedParentReceiver = receiver;
                 return receiver;
             }
         }
-
         return nullptr;
     }
 
-
 public:
+    Hardpoint3D() = default;
 
-    Hardpoint() = default;
-
-    void attachWeapon(const std::shared_ptr<Weapon>& w) {
+    void attachWeapon(const std::shared_ptr<Weapon3D>& w) {
         weapon = w;
         if (weapon)
             addChild(weapon); // weapon follows hardpoint
@@ -67,46 +62,39 @@ public:
         }
     }
 
-    // Pass firing command to attached weapon if it exists
     void startFiring() {
         if (weapon)
             weapon->startFiring();
     }
 
-    // Pass firing command to attached weapon if it exists
     void stopFiring() {
         if (weapon)
             weapon->stopFiring();
     }
 
-    // Pass update to weapon if it exists
     void update(double dt) override {
         if (weapon)
             weapon->update(dt);
     }
 
-    // Apply force to physically enabled parent
-    void applyForce(const glm::vec2& force, double dt) override {
+    // ---------------- Physics forwarding ----------------
+    void applyForce(const glm::vec3& force, double dt) override {
         if (auto receiver = getParentReceiver())
             receiver->applyForce(force, dt);
     }
 
-    // Apply torque to physically enabled parent
-    void applyTorque(float torque, double dt) override {
+    void applyTorque(const glm::vec3& torque, double dt) override {
         if (auto receiver = getParentReceiver())
             receiver->applyTorque(torque, dt);
     }
 
-    // Apply impulse to physically enabled parent
-    void applyImpulse(const glm::vec2& impulse) override {
+    void applyImpulse(const glm::vec3& impulse) override {
         if (auto receiver = getParentReceiver())
             receiver->applyImpulse(impulse);
     }
 
-    // Apply angular impulse to physically enabled parent
-    void applyAngularImpulse(float angularImpulse) override {
+    void applyAngularImpulse(const glm::vec3& angularImpulse) override {
         if (auto receiver = getParentReceiver())
             receiver->applyAngularImpulse(angularImpulse);
     }
 };
-

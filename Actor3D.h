@@ -4,11 +4,11 @@
 #include "InputSystem.h"
 #include <string>
 #include <typeindex>
-#include "BaseComponent.h"
+#include "BaseComponent3D.h"
 
 class Actor3D : public Transform3D {
 public:
-    std::vector<std::shared_ptr<BaseComponent>> components;
+    std::vector<std::shared_ptr<BaseComponent3D>> components;
     std::string meshName; // analogous to spriteName
 
     Actor3D() = default;
@@ -17,7 +17,7 @@ public:
     // ---------------- Component System ----------------
     template <typename T, typename... Args>
     std::shared_ptr<T> addComponent(Args&&... args) {
-        static_assert(std::is_base_of<BaseComponent, T>::value,
+        static_assert(std::is_base_of<BaseComponent3D, T>::value,
             "T must inherit BaseComponent");
 
         auto comp = std::make_shared<T>(std::forward<Args>(args)...);
@@ -32,7 +32,7 @@ public:
             std::remove_if(
                 components.begin(),
                 components.end(),
-                [&](const std::shared_ptr<BaseComponent>& c) {
+                [&](const std::shared_ptr<BaseComponent3D>& c) {
                     return dynamic_cast<T*>(c.get()) != nullptr;
                 }),
             components.end()
@@ -49,16 +49,27 @@ public:
     }
 
     // ---------------- Update ----------------
-    virtual void update(double dt) override {};
+    void update(double dt) {
+        std::sort(components.begin(), components.end(),
+            [](const std::shared_ptr<BaseComponent3D>& a,
+                const std::shared_ptr<BaseComponent3D>& b) {
+                    return a->priority < b->priority;
+            });
+
+        for (auto& comp : components) {
+            if (comp->enabled)
+                comp->update(dt);
+        }
+    }
 
     // ---------------- Direction Helpers ----------------
     // Local-space axes
     vec3 forward() const { return normalize(rotation * vec3(0, 0, -1)); }
     vec3 up()      const { return normalize(rotation * vec3(0, 1, 0)); }
-    vec3 right()   const { return normalize(rotation * vec3(1, 0, 0)); }
+    vec3 left()   const { return normalize(rotation * vec3(1, 0, 0)); }
 
     // World-space axes
     vec3 forwardWorld() { return normalize(getWorldRotation() * vec3(0, 0, -1)); }
     vec3 upWorld()      { return normalize(getWorldRotation() * vec3(0, 1, 0)); }
-    vec3 rightWorld()   { return normalize(getWorldRotation() * vec3(1, 0, 0)); }
+    vec3 leftWorld()   { return normalize(getWorldRotation() * vec3(1, 0, 0)); }
 };

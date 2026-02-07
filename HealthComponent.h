@@ -1,11 +1,11 @@
 #pragma once
-#include "BaseComponent.h"
+#include "BaseComponent3D.h"
 #include "glm/glm.hpp"
 #include "Services.h"
 #include "EventBus.h"
 #include <string>
 
-class HealthComponent : public BaseComponent {
+class HealthComponent : public BaseComponent3D {
 public:
     float health = 100.f;
     float maxHealth = 100.f;

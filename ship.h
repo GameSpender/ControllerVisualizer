@@ -217,48 +217,6 @@ private:
 		physics->velocity = velocity;
 		physics->angularVelocity = angularVelocity;
     }
-
-
-    //void produceParticles(float thrust, double dt) {
-    //    if (thrust < 0.001f)
-    //        return;
-
-    //    // Number of particles scales with thrust and delta time
-    //    float thrustSmoke = thrust * 70.0f * dt;
-    //    int particlesToSpawn = 0;
-
-    //    if (thrustSmoke >= 1.0f) {
-    //        particlesToSpawn = static_cast<int>(thrustSmoke);
-    //    }
-    //    else {
-    //        // Chance-based: spawn 1 particle with probability equal to thrustSmoke
-    //        if ((float(rand()) / RAND_MAX) < thrustSmoke) {
-    //            particlesToSpawn = 1;
-    //        }
-    //    }
-
-    //    for (int i = 0; i < particlesToSpawn; ++i) {
-    //        // Spawn position slightly behind the ship
-    //        vec2 offset = -forward() * 0.3f * length(getWorldScale()); // 10 units behind ship
-    //        vec2 spawnPos = position + offset;
-
-    //        // Particle velocity opposite to ship's forward + some randomness
-    //        vec2 particleVel = -forward() * (10.0f + thrust * 100.0f) + physics.velocity;
-    //        particleVel += vec2(
-    //            (float(rand()) / RAND_MAX - 0.5f) * 10.0f, // x random jitter
-    //            (float(rand()) / RAND_MAX - 0.5f) * 10.0f  // y random jitter
-    //        );
-
-    //        // Lifetime, size, color (customize as needed)
-    //        float lifetime = 0.2f + (float(rand()) / RAND_MAX) * 1.0f;
-    //        float size = 10.0f + (float(rand()) / RAND_MAX) * 2.0f;
-    //        float rot = (float(rand()) / RAND_MAX) * M_PI;
-    //        vec4 color = vec4(0.8f, 0.8f, 0.8f, 1.0f); // light gray smoke
-
-    //        // Add to the vector
-    //        //smokeParticles.emplace_back(smokeTexture, spawnPos, particleVel, lifetime, size, rot, 3.0f);
-    //    }
-    //}
 };
 
 

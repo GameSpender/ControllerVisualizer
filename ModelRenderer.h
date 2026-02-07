@@ -6,6 +6,7 @@
 #include "Services.h" // For texture loading
 #include "AssetManager.h"
 #include "LightManager.h"
+#include "Model3D.h"
 
 class ModelRenderer {
 public:
@@ -64,6 +65,7 @@ public:
 
         for (const auto& mesh : model->meshes)
         {
+
             glm::mat4 modelMatrix = rootTransform * mesh->transform;
             glm::mat4 mvp = proj * view * modelMatrix;
 
@@ -102,6 +104,12 @@ public:
 
         glBindVertexArray(0);
         glUseProgram(0);
+    }
+
+    // -------------------- New overload for Model3D --------------------
+    void Draw(std::shared_ptr<Model3D> node, const glm::mat4& view, const glm::mat4& proj, const glm::vec3& cameraPos) const {
+        if (!node || !node->model) return;
+        Draw(node->model.get(), node->getWorldMatrix(), view, proj, cameraPos);
     }
 
 private:

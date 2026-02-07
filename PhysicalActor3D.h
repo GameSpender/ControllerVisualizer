@@ -37,7 +37,7 @@ public:
 
     // ---------------- Actor update ----------------
     void update(double dt) override {
-        physics->update(dt);
+        Actor3D::update(dt);   // update all components (including physics)
     }
 
     // ---------------- Convenience getters ----------------

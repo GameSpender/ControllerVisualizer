@@ -1,14 +1,14 @@
 #pragma once
 #include "IControllable.h"
 #include "InputSystem.h"
-#include "Actor.h"
-#include "PhysicalActor2D.h"
+#include "Actor3D.h"
+#include "PhysicalActor3D.h"
 #include <glm/glm.hpp>
 
 class PlayerController {
     IControllable* pawn = nullptr;
-    Actor2D* actorPawn = nullptr;
-    PhysicalActor2D* physPawn = nullptr;
+    Actor3D* actorPawn = nullptr;
+    PhysicalActor3D* physPawn = nullptr;
 
     PlayerInput* input = nullptr;
 
@@ -17,8 +17,8 @@ public:
 
     void possess(IControllable* target) {
         pawn = target;
-        actorPawn = dynamic_cast<Actor2D*>(pawn);
-        physPawn = dynamic_cast<PhysicalActor2D*>(pawn);
+        actorPawn = dynamic_cast<Actor3D*>(pawn);
+        physPawn = dynamic_cast<PhysicalActor3D*>(pawn);
     }
 
     void unpossess() {
@@ -52,15 +52,15 @@ public:
         pawn->dash(input->isDown(Action::Dash));
     }
 
-    glm::vec2 pawnPosition() const {
+    glm::vec3 pawnPosition() const {
         if (actorPawn)
             return actorPawn->getWorldPosition();
-        return glm::vec2(0.0f);
+        return glm::vec3(0.0f);
     }
 
-    glm::vec2 pawnVelocity() const {
+    glm::vec3 pawnVelocity() const {
         if (physPawn)
             return physPawn->getVelocity();
-        return glm::vec2(0.0f);
+        return glm::vec3(0.0f);
     }
 };

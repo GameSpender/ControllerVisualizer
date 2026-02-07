@@ -8,6 +8,7 @@ class SoundManager;
 class EventHandler;
 class ProjectileSystem;
 class CollisionSystem;
+class CollisionSystem3D;
 class LightManager;
 
 struct Services {
@@ -21,6 +22,7 @@ struct Services {
     inline static EventHandler* eventHandler = nullptr;
     inline static ProjectileSystem* projectiles = nullptr;
 	inline static CollisionSystem* collisions = nullptr;
+	inline static CollisionSystem3D* collisions3D = nullptr;
 
 
     // Initialize everything
@@ -32,6 +34,7 @@ struct Services {
         EventHandler* eventHandler_,
         ProjectileSystem* projectileSystem_,
 		CollisionSystem* collisionSystem_,
+		CollisionSystem3D* collisionSystem3D_,
 		LightManager* lightManager_
     )
     {
@@ -42,6 +45,7 @@ struct Services {
         eventHandler = eventHandler_;
         projectiles = projectileSystem_;
 		collisions = collisionSystem_;
+		collisions3D = collisionSystem3D_;
 		lights = lightManager_;
     }
 };

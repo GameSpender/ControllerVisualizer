@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -159,6 +159,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="MainOld.cpp" />
     <ClCompile Include="ModelImporter.cpp" />
     <ClCompile Include="Physics.cpp" />
     <ClCompile Include="Util.cpp" />
@@ -175,6 +176,7 @@
     <ClInclude Include="Collider.h" />
     <ClInclude Include="CollisionLayers.h" />
     <ClInclude Include="CollisionSystem.h" />
+    <ClInclude Include="CollisionSystem3D.h" />
     <ClInclude Include="Director.h" />
     <ClInclude Include="EventBus.h" />
     <ClInclude Include="EventHandler.h" />
@@ -183,6 +185,7 @@
     <ClInclude Include="GamepadObject.h" />
     <ClInclude Include="Enemy.h" />
     <ClInclude Include="Guns.h" />
+    <ClInclude Include="Collider3D.h" />
     <ClInclude Include="HealthComponent.h" />
     <ClInclude Include="IControllable.h" />
     <ClInclude Include="Init.h" />
@@ -190,6 +193,8 @@
     <ClInclude Include="InteractionInterfaces.h" />
     <ClInclude Include="LightManager.h" />
     <ClInclude Include="LineVisualizer.h" />
+    <ClInclude Include="LockToPlaneComponent.h" />
+    <ClInclude Include="Model3D.h" />
     <ClInclude Include="ModelImporter.h" />
     <ClInclude Include="ModelRenderer.h" />
     <ClInclude Include="PhysicalActor2D.h" />
@@ -204,6 +209,7 @@
     <ClInclude Include="PulseEffectRenderer.h" />
     <ClInclude Include="Services.h" />
     <ClInclude Include="ship.h" />
+    <ClInclude Include="Ship3D.h" />
     <ClInclude Include="ShipFactory.h" />
     <ClInclude Include="SimpleShootingAi.h" />
     <ClInclude Include="SoundManager.h" />
@@ -216,6 +222,7 @@
     <ClInclude Include="Transform3D.h" />
     <ClInclude Include="Util.h" />
     <ClInclude Include="Weapon.h" />
+    <ClInclude Include="Weapon3D.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\a_idle.png" />

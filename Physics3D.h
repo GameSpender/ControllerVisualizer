@@ -2,6 +2,7 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/quaternion.hpp"
 #include "BaseComponent3D.h"
+#include "Actor3D.h"
 
 class PhysicalActor3D;
 
@@ -29,9 +30,9 @@ public:
 // --- Physics data / integrator ---
 class PhysicsComponent3D : public BaseComponent3D, public PhysicsReceiver3D {
 public:
-    float mass = 5.0f;
-    float friction = 0.5f;           // linear damping
-    float angularFriction = 0.5f;    // rotational damping
+    float mass = 50.0f;
+    float friction = 0.2f;           // linear damping
+    float angularFriction = 0.05f;    // rotational damping
 
     bool isKinematic = false;        // true = ignore forces/torque
 
@@ -51,9 +52,12 @@ public:
         // Rotational motion
         angularVelocity *= std::max(0.0f, 1.0f - angularFriction * float(dt));
         if (glm::length(angularVelocity) > 0.0f) {
-            glm::quat rotDelta = glm::quat(angularVelocity * float(dt)); // small-angle approximation
+            glm::vec3 axis = glm::normalize(angularVelocity);
+            float angle = glm::length(angularVelocity) * float(dt);
+            glm::quat rotDelta = glm::angleAxis(angle, axis);
             owner->rotation = glm::normalize(rotDelta * owner->rotation);
         }
+
     }
 
     void applyForce(const glm::vec3& force, double dt) override {
