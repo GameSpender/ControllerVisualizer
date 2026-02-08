@@ -10,6 +10,7 @@ class ProjectileSystem;
 class CollisionSystem;
 class CollisionSystem3D;
 class LightManager;
+class RenderSystem;
 
 struct Services {
 
@@ -23,6 +24,7 @@ struct Services {
     inline static ProjectileSystem* projectiles = nullptr;
 	inline static CollisionSystem* collisions = nullptr;
 	inline static CollisionSystem3D* collisions3D = nullptr;
+	inline static RenderSystem* renderSystem = nullptr;
 
 
     // Initialize everything
@@ -35,7 +37,8 @@ struct Services {
         ProjectileSystem* projectileSystem_,
 		CollisionSystem* collisionSystem_,
 		CollisionSystem3D* collisionSystem3D_,
-		LightManager* lightManager_
+		LightManager* lightManager_,
+		RenderSystem* renderSystem_
     )
     {
         inputSystem = inputSystem_;
@@ -47,5 +50,6 @@ struct Services {
 		collisions = collisionSystem_;
 		collisions3D = collisionSystem3D_;
 		lights = lightManager_;
+		renderSystem = renderSystem_;
     }
 };

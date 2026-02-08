@@ -97,7 +97,7 @@ unsigned loadImageToTexture(const char* filePath) {
     if (ImageData != NULL)
     {
         //Slike se osnovno ucitavaju naopako pa se moraju ispraviti da budu uspravne
-        //stbi__vertical_flip(ImageData, TextureWidth, TextureHeight, TextureChannels);
+        stbi__vertical_flip(ImageData, TextureWidth, TextureHeight, TextureChannels);
 
         // Provjerava koji je format boja ucitane slike
         GLint InternalFormat = -1;

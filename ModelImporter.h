@@ -45,7 +45,7 @@ public:
 
 class Model {
 public:
-    std::vector<std::unique_ptr<Mesh>> meshes;
+    std::vector<std::shared_ptr<Mesh>> meshes;
 	std::string directory; // Directory of the model file for resolving external textures
 };
 
@@ -55,7 +55,7 @@ public:
 class ModelImporter {
 public:
     // Load a model from file (.glb/.gltf/.obj etc.)
-    static std::unique_ptr<Model> loadModel(const std::string& path, const std::string& name);
+    static std::shared_ptr<Model> loadModel(const std::string& path, const std::string& name);
 	static void printMaterialDebug(const aiMaterial* material);
 
 private:
@@ -63,7 +63,7 @@ private:
     static void processNode(const aiNode* node, const aiScene* scene, Model& model, const glm::mat4& parentTransform);
 
     // Process a single mesh
-    static std::unique_ptr<Mesh> processMesh(const aiMesh* mesh, const aiScene* scene);
+    static std::shared_ptr<Mesh> processMesh(const aiMesh* mesh, const aiScene* scene);
 
     // Load a texture from material
     static std::string getTextureKeyFromMaterial(const aiMaterial* material, aiTextureType type);

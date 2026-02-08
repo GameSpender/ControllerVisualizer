@@ -10,10 +10,8 @@
 #include <unordered_map>
 #include <vector>
 #include "Weapon3D.h"
-
 #include "glm/gtx/vector_angle.hpp"
 
-#include "stdio.h"
 
 using namespace glm;
 
@@ -166,8 +164,6 @@ private:
 
         applyTorque(vec3(0, torque, 0), dt);
         
-		std::cout << "AngleDiff: " << angleDiff << " AngularVel: " << getAngularVelocityPlane().y << " Torque: " << torque << "\n";
-
         return torque;
     }
 

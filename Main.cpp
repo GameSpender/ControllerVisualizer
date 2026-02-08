@@ -24,6 +24,7 @@
 #include "ProjectileSystem.h"
 #include "CollisionSystem3D.h"
 #include "LightManager.h"
+#include "RenderSystem.h"
 
 #include "BindingGenerator.h"
 #include "Ship3D.h"
@@ -74,6 +75,8 @@ int main()
 
 
     unsigned int shader3D = createShader("shaders/3dColor.vert", "shaders/3dColor.frag");
+    unsigned int spriteShader = createShader("shaders/sprite.vert", "shaders/sprite.frag");
+
 
     glm::vec3 cameraPos(50, 50, -50);
     glm::vec3 target(50, 0, 50);
@@ -89,6 +92,8 @@ int main()
 
     //SpriteRenderer spriteRenderer(rectShader);
     ModelRenderer modelRenderer(shader3D);
+
+    SpriteRenderer spriteRenderer(spriteShader);
 
 
     glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
@@ -113,10 +118,11 @@ int main()
         new AssetManager,
         new SoundManager,
         new EventHandler,
-        new ProjectileSystem,
+        nullptr, // projectile system
 		nullptr, // 2D collision system 
         new CollisionSystem3D,
-        new LightManager
+        new LightManager,
+        new RenderSystem(&modelRenderer, &spriteRenderer)
     );
 
 
@@ -124,6 +130,7 @@ int main()
 
 
     Services::assets->loadModel("plane", "res/models/plane/plane.gltf");
+	Services::assets->loadTexture("testSprite", "res/fourlegs.png");
 
 
     keyboard = {
@@ -163,9 +170,19 @@ int main()
 
 	std::shared_ptr<Model3D> shipModel = std::make_shared<Model3D>("plane");
 
+	Services::renderSystem->submit(shipModel);
+
     playerShip->addChild(shipModel);
 
     worldOrigin->addChild(playerShip);
+
+	std::shared_ptr<Sprite3D> testSprite = std::make_shared<Sprite3D>("testSprite", Sprite3D::Mode::Billboard);
+	testSprite->position = vec3(10, 0, 0);
+	testSprite->scale = vec3(100.0f);
+
+	playerShip->addChild(testSprite);
+
+	Services::renderSystem->submit(testSprite);
 
 
 
@@ -193,7 +210,7 @@ int main()
     playerController.possess(playerShip.get());
 
 
-    Services::lights->ambientColor = glm::vec3(0.05f); // slightly brighter ambient light for 3D models
+    Services::lights->ambientColor = glm::vec3(0.5f); // slightly brighter ambient light for 3D models
 
     PointLight2D pointLight;
     pointLight.position = vec3(screenWidth / 2, screenHeight / 2, 100);
@@ -241,12 +258,11 @@ int main()
 
         playerShip->update(dt);
 
-        Services::projectiles->update(dt);
+        //Services::projectiles->update(dt);
 
         if(Services::collisions3D)
 			Services::collisions3D->update();
-		if (Services::collisions)
-            Services::collisions->update();
+
 
         Services::eventHandler->processEvents();
         Services::eventBus->clear();
@@ -268,7 +284,7 @@ int main()
             glEnable(GL_DEPTH_TEST);
 
 
-			modelRenderer.Draw(shipModel, view, projection, cameraPos);
+			Services::renderSystem->renderAll(view, projection, cameraPos);
 
 
 

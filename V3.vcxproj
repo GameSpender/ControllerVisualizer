@@ -149,8 +149,8 @@
     <None Include="res\models\box01.glb" />
     <None Include="shaders\3dColor.frag" />
     <None Include="shaders\3dColor.vert" />
-    <None Include="shaders\color.frag" />
-    <None Include="shaders\color.vert" />
+    <None Include="shaders\sprite.frag" />
+    <None Include="shaders\sprite.vert" />
     <None Include="shaders\passthrough.vert" />
     <None Include="shaders\pulse_effect.frag" />
     <None Include="shaders\rect.frag" />
@@ -207,12 +207,15 @@
     <ClInclude Include="PostProcessRenderer.h" />
     <ClInclude Include="ProjectileSystem.h" />
     <ClInclude Include="PulseEffectRenderer.h" />
+    <ClInclude Include="Renderable.h" />
+    <ClInclude Include="RenderSystem.h" />
     <ClInclude Include="Services.h" />
     <ClInclude Include="ship.h" />
     <ClInclude Include="Ship3D.h" />
     <ClInclude Include="ShipFactory.h" />
     <ClInclude Include="SimpleShootingAi.h" />
     <ClInclude Include="SoundManager.h" />
+    <ClInclude Include="Sprite3D.h" />
     <ClInclude Include="SpriteRenderer.h" />
     <ClInclude Include="TeamRules.h" />
     <ClInclude Include="TextRenderer.h" />

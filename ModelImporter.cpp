@@ -120,11 +120,11 @@ std::string ModelImporter::getTextureKeyFromMaterial(
     return std::string(path.C_Str()); // just the key/filename
 }
 
-std::unique_ptr<Mesh> ModelImporter::processMesh(
+std::shared_ptr<Mesh> ModelImporter::processMesh(
     const aiMesh* mesh,
     const aiScene* scene)
 {
-    auto outMesh = std::make_unique<Mesh>();
+    auto outMesh = std::make_shared<Mesh>();
 
     std::vector<Vertex> vertices(mesh->mNumVertices);
     std::vector<uint32_t> indices;
@@ -225,12 +225,13 @@ void ModelImporter::processNode(const aiNode* node, const aiScene* scene, Model&
 /* --------------------------
    Main import function
 -------------------------- */
-std::unique_ptr<Model> ModelImporter::loadModel(const std::string& path, const std::string& name) {
+std::shared_ptr<Model> ModelImporter::loadModel(const std::string& path, const std::string& name) {
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile(
         path + name,
         aiProcess_Triangulate |
-        aiProcess_GenSmoothNormals
+        aiProcess_GenSmoothNormals |
+        aiProcess_FlipUVs
     );
 
     if (!scene || !scene->mRootNode || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE) {
@@ -238,7 +239,7 @@ std::unique_ptr<Model> ModelImporter::loadModel(const std::string& path, const s
         return nullptr;
     }
 
-    auto model = std::make_unique<Model>();
+    auto model = std::make_shared<Model>();
     model.get()->directory = path;
     processNode(scene->mRootNode, scene, *model, glm::mat4(1.0f));
     return model;

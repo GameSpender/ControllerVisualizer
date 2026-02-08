@@ -3,6 +3,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp> // for translate/rotate/scale
 #include <glm/gtc/type_ptr.hpp>
+#include "Services.h"
+#include "AssetManager.h"
+#include "LightManager.h"
+#include "Sprite3D.h"
 
 class SpriteRenderer {
 public:
@@ -18,56 +22,141 @@ public:
         glDeleteVertexArrays(1, &quadVAO);
     }
 
-    // -------------------------------
-// 1. Draw using mat3 transform
-// -------------------------------
-    void Draw(GLuint texture, const glm::mat3& transform) {
-        glm::mat4 model(1.0f);
-
-        // Copy rotation+scale components
-        model[0][0] = transform[0][0]; // a
-        model[0][1] = transform[0][1]; // c
-        model[1][0] = transform[1][0]; // b
-        model[1][1] = transform[1][1]; // d
-
-        // Translation
-        model[3][0] = transform[2].x;
-        model[3][1] = transform[2].y;
-
+	void Draw(Texture texture,
+        const glm::mat4& model,
+        const glm::mat4& view,
+        const glm::mat4& proj,
+        const glm::vec3& cameraPos) const
+    {
         glUseProgram(shader);
+
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+
+        // ----------------------------------
+        // Lights
+        // ----------------------------------
+        glm::vec3 ambientColor = glm::vec3(0.01f);
+        if (Services::lights) ambientColor = Services::lights->ambientColor;
+        glUniform3fv(glGetUniformLocation(shader, "uAmbientColor"), 1, glm::value_ptr(ambientColor));
+
+		auto activeLights = Services::lights->getActiveLights();
+        int numPointLights = 0;
+
+        for (int i = 0; i < activeLights.size(); ++i) {
+            auto pl = std::dynamic_pointer_cast<PointLight2D>(activeLights[i]);
+            if (!pl) continue;
+            if (numPointLights >= 50) break;
+
+            std::string prefix = "uPointLights[" + std::to_string(i) + "].";
+
+            glUniform3fv(glGetUniformLocation(shader, (prefix + "position").c_str()), 1, glm::value_ptr(pl->position));
+            glUniform3fv(glGetUniformLocation(shader, (prefix + "color").c_str()), 1, glm::value_ptr(pl->color));
+            glUniform1f(glGetUniformLocation(shader, (prefix + "intensity").c_str()), pl->intensity);
+            glUniform1f(glGetUniformLocation(shader, (prefix + "range").c_str()), pl->range);
+            glUniform1f(glGetUniformLocation(shader, (prefix + "falloff").c_str()), pl->falloff);
+
+            numPointLights++;
+        }
+        glUniform1i(glGetUniformLocation(shader, "uNumPointLights"), numPointLights);
+        glUniform3fv(glGetUniformLocation(shader, "uCameraPos"), 1, glm::value_ptr(cameraPos));
+
+        // ----------------------------------
+        // Transform
+        // ----------------------------------
+        glm::mat4 mvp = proj * view * model;
         glUniformMatrix4fv(glGetUniformLocation(shader, "uModel"), 1, GL_FALSE, glm::value_ptr(model));
+        glUniformMatrix4fv(glGetUniformLocation(shader, "uMVP"), 1, GL_FALSE, glm::value_ptr(mvp));
 
+        // ----------------------------------
+        // Texture
+        // ----------------------------------
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+        glBindTexture(GL_TEXTURE_2D, texture.id);
+        glUniform1i(glGetUniformLocation(shader, "uTexture"), 0);
 
+        glUniform3fv(glGetUniformLocation(shader, "uEmissive"), 1, glm::value_ptr(texture.emissive));
+
+        // ----------------------------------
+        // Draw quad
+        // ----------------------------------
         glBindVertexArray(quadVAO);
         glDrawArrays(GL_TRIANGLES, 0, 6);
         glBindVertexArray(0);
+
+        glUseProgram(0);
     }
 
+    void Draw(std::shared_ptr<Sprite3D> sprite,
+        const glm::mat4& view,
+        const glm::mat4& proj,
+        const glm::vec3& cameraPos) const
+    {
+        if (!sprite) return;
 
-    void Draw(GLuint texture, glm::vec2 pos, glm::vec2 size, float rotation = 0.0f) {
-        glm::mat4 model(1.0f);
+        auto tex = sprite->texture.lock();
+        if (!tex) return;
 
-        // Translate to the desired position
-        model = glm::translate(model, glm::vec3(pos, 0.0f));
+        glm::mat4 modelMatrix(1.0f);
 
-        model = glm::translate(model, glm::vec3(0.5f * size.x, 0.5f * size.y, 0.0f));
-        model = glm::rotate(model, rotation, glm::vec3(0, 0, 1));
-        model = glm::translate(model, glm::vec3(-0.5f * size.x, -0.5f * size.y, 0.0f));
+        glm::vec3 worldPos = glm::vec3(sprite->getWorldMatrix()[3]);
 
-        model = glm::scale(model, glm::vec3(size.x, -size.y, 1.0f));
+        switch (sprite->mode)
+        {
+        case Sprite3D::Mode::Normal:
+        {
+            modelMatrix = sprite->getWorldMatrix();
+            break;
+        }
 
-        glUseProgram(shader);
-        glUniformMatrix4fv(glGetUniformLocation(shader, "uModel"), 1, GL_FALSE, glm::value_ptr(model));
+        case Sprite3D::Mode::Billboard:
+        {
+            // Full spherical billboard
+            glm::vec3 forward = glm::normalize(cameraPos - worldPos);
+            glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0, 1, 0), forward));
+            glm::vec3 up = glm::cross(forward, right);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture);
+            glm::mat4 rot(1.0f);
+            rot[0] = glm::vec4(right, 0.0f);
+            rot[1] = glm::vec4(up, 0.0f);
+            rot[2] = glm::vec4(forward, 0.0f);
 
-        glBindVertexArray(quadVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
+            modelMatrix =
+                glm::translate(glm::mat4(1.0f), worldPos) *
+                rot *
+                scale(glm::mat4(1.0f), sprite->scale);
+            break;
+        }
+
+        case Sprite3D::Mode::BillboardVertical:
+        {
+            // Y-up cylindrical billboard
+            glm::vec3 forward = cameraPos - worldPos;
+            forward.y = 0.0f;
+            forward = glm::normalize(forward);
+
+            glm::vec3 right = glm::normalize(glm::cross(glm::vec3(0, 1, 0), forward));
+            glm::vec3 up = glm::vec3(0, 1, 0);
+
+            glm::mat4 rot(1.0f);
+            rot[0] = glm::vec4(right, 0.0f);
+            rot[1] = glm::vec4(up, 0.0f);
+            rot[2] = glm::vec4(forward, 0.0f);
+
+            modelMatrix =
+                glm::translate(glm::mat4(1.0f), worldPos) *
+                rot *
+				scale(glm::mat4(1.0f), sprite->scale)
+                ;
+            break;
+        }
+        }
+
+		Texture texRef = *tex.get();
+        // Delegate to pure draw
+        Draw(texRef, modelMatrix, view, proj, cameraPos);
     }
+
 
 private:
     void initRenderData() {

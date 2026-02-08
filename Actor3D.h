@@ -9,7 +9,7 @@
 class Actor3D : public Transform3D {
 public:
     std::vector<std::shared_ptr<BaseComponent3D>> components;
-    std::string meshName; // analogous to spriteName
+	bool expired = false; // for cleanup
 
     Actor3D() = default;
     virtual ~Actor3D() = default;

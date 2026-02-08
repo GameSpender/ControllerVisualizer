@@ -360,3 +360,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /build
 *.7z
+/Sprite3D.h

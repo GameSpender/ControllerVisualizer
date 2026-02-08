@@ -108,8 +108,8 @@ public:
 
     // -------------------- New overload for Model3D --------------------
     void Draw(std::shared_ptr<Model3D> node, const glm::mat4& view, const glm::mat4& proj, const glm::vec3& cameraPos) const {
-        if (!node || !node->model) return;
-        Draw(node->model.get(), node->getWorldMatrix(), view, proj, cameraPos);
+        if (!node) return;
+        Draw(node->getModel().lock().get(), node->getWorldMatrix(), view, proj, cameraPos);
     }
 
 private:
@@ -118,16 +118,16 @@ private:
 
         std::string fullPath = modelDirectory + key;
 
-        Texture* tex = Services::assets->getTexture(key);
-        if (!tex) {
+        std::weak_ptr<Texture> tex = Services::assets->getTexture(key);
+        if (tex.expired()) {
             Services::assets->loadTexture(key, fullPath);
             tex = Services::assets->getTexture(key);
         }
 
-        if (!tex || tex->id == 0) return;
+        if (tex.expired()) return;
 
         glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, tex->id);
+        glBindTexture(GL_TEXTURE_2D, tex.lock()->id);
         glUniform1i(glGetUniformLocation(shader, uniformName), slot);
     }
 };

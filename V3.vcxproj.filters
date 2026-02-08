@@ -17,8 +17,8 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="vcpkg.json" />
-    <None Include="shaders\color.frag" />
-    <None Include="shaders\color.vert" />
+    <None Include="shaders\sprite.frag" />
+    <None Include="shaders\sprite.vert" />
     <None Include="shaders\passthrough.vert" />
     <None Include="shaders\pulse_effect.frag" />
     <None Include="shaders\rect.frag" />
@@ -217,6 +217,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Model3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Sprite3D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Renderable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="RenderSystem.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

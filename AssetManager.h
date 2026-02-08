@@ -16,6 +16,7 @@ public:
     GLuint id = 0;
     int width = 0;
     int height = 0;
+    glm::vec3 emissive{ 0.0f };
 };
 
 class AssetManager {
@@ -23,17 +24,17 @@ public:
     void loadTexture(const std::string& name, const std::string& filePath) {
         if (textures.find(name) != textures.end()) return;
 
-        std::unique_ptr<Texture> tex = std::make_unique<Texture>();
+        std::shared_ptr<Texture> tex = std::make_shared<Texture>();
         tex->id = preprocessTexture(filePath.c_str());
         std::cout << "Loading texture: " << filePath << std::endl;
         textures[name] = std::move(tex);
     }
 
-    Texture* getTexture(const std::string& name) {
+    std::weak_ptr<Texture> getTexture(const std::string& name) {
         auto it = textures.find(name);
-        if (it != textures.end()) return it->second.get();
+        if (it != textures.end()) return it->second;
         std::cerr << "Texture not found: " << name << std::endl;
-        return nullptr;
+		return std::weak_ptr<Texture>();
     }
 
     // --------------------
@@ -68,14 +69,14 @@ public:
         models[name] = std::move(model);
     }
 
-    Model* getModel(const std::string& name) {
+    std::weak_ptr<Model> getModel(const std::string& name) {
         auto it = models.find(name);
-        if (it != models.end()) return it->second.get();
+        if (it != models.end()) return it->second;
         std::cerr << "Model not found: " << name << std::endl;
-        return nullptr;
+		return std::weak_ptr<Model>();
     }
 
 private:
-    std::unordered_map<std::string, std::unique_ptr<Texture>> textures;
-    std::unordered_map<std::string, std::unique_ptr<Model>> models;
+    std::unordered_map<std::string, std::shared_ptr<Texture>> textures;
+    std::unordered_map<std::string, std::shared_ptr<Model>> models;
 };
