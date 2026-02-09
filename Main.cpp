@@ -159,6 +159,7 @@ int main()
 
 	Services::assets->loadTexture("smoke", "res/sprites/smoke.png");
     Services::assets->loadTexture("laser_shot", "res/sprites/enemy_projectile.png");
+    Services::assets->loadTexture("signature", "res/sprites/signature.png");
 
     Services::sound->loadSound("laser_shot", "res/audio/shoot.wav");
 
@@ -230,6 +231,7 @@ int main()
     auto laserGun = std::make_shared<LaserGun>();
     laserGun->scale = vec3(5.0f);
     laserGun->shotInterval = 0.3f;
+    laserGun->lifetime = 1.0f;
     hardpoint->attachWeapon(laserGun);
 
 
@@ -289,7 +291,7 @@ int main()
     playerController.possess(playerShip.get());
 
 
-	glm::vec3 ambientLight(0.05f); // default ambient light for 3D models
+	glm::vec3 ambientLight(0.0f); // default ambient light for 3D models
     Services::lights->ambientColor = ambientLight; // slightly brighter ambient light for 3D models
     glClearColor(ambientLight.x, ambientLight.y, ambientLight.z, 1.0f); // Postavljanje boje pozadine
 
@@ -301,14 +303,20 @@ int main()
     auto light = std::make_shared<PointLight3D>(pointLight);
     Services::lights->addLight(light);
 
+    pointLight.position.y - 1000;
+    pointLight.range = 1500.0f;
+    pointLight.intensity = 0.7f;
+    auto light2 = std::make_shared<PointLight3D>(pointLight);
+    Services::lights->addLight(light2);
+
    
 
 
 
     PointLight3D pl;
     pl.color = vec3(0.9f, 0.5f, 0);
-    pl.intensity = 3.0f;
-    pl.range = 300.0f;
+    pl.intensity = 10.0f;
+    pl.range = 200.0f;
 
     pl.position = vec3(mapSize.x / 2, 40, 5.0f);
 	auto plPtr1 = std::make_shared<PointLight3D>(pl);
@@ -344,13 +352,13 @@ int main()
         pl.position = vec3(-23.0f, -10.0f, -23.7f - offset);
         pl.color = vec3(1.0, 0.2f, 0.2f);
         pl.intensity = 3.0f;
-        pl.range = 100.0f;
+        pl.range = 150.0f;
 
         PointLight3D pr;
         pr.position = vec3(23.0f, -10.0f, -23.7f - offset);
         pr.color = vec3(1.0, 0.2f, 0.2f);
         pr.intensity = 3.0f;
-        pr.range = 100.0f;
+        pr.range = 150.0f;
 
 		auto plPtr = std::make_shared<PointLight3D>(pl);
 		auto prPtr = std::make_shared<PointLight3D>(pr);
@@ -364,6 +372,15 @@ int main()
         pl.markDirty();
         pr.markDirty();
     }
+
+    auto signature = std::make_shared<Sprite3D>("signature");
+    signature->scale = vec3(4.0f);
+    signature->position = vec3(22, 12, 0);
+    //signature->rotation = vec3(glm::half_pi<float>(), 0, 0);
+
+
+    map->addChild(signature);
+    Services::renderSystem->submit(signature);
 
 
 

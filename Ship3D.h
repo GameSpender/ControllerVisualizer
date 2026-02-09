@@ -13,6 +13,7 @@
 #include "Weapon3D.h"
 #include "ParticleEmitter.h"
 #include "glm/gtx/vector_angle.hpp"
+#include "Model3D.h"
 
 
 using namespace glm;
@@ -20,23 +21,28 @@ using namespace glm;
 class Ship3D : public PhysicalActor3D, public IControllable {
     std::shared_ptr<HealthComponent> health;
     std::shared_ptr<LockToPlaneComponent> planeLock;
-	
+    std::weak_ptr<Model3D> body;
 
 public:
 
     std::weak_ptr<ParticleEmitter3D> engineEmitter;
     // Ship parameters
-    float baseThrust = 800.0f;
-    float bonusThrustMultiplier = 1.2f;
+    float baseThrust = 1000.0f;
+    float bonusThrustMultiplier = 1.4f;
     float bonusBrakingMultiplier = 2.0f;
     float rotationThrust = 170.0f;
 
     float roll = 0.0f;
+    float rollSpeed = 0.0f;
+    float centering = 20.0f;
+    float spinFactor = 1.0f;
+    float damping = 5.0f;
 
     float PD_p = 40.0f;
     float PD_d = 10.0f;
 
     float shotSpeed = 3000.0f;
+
 
     vec2 thrustDir = vec2(0.0f);   // local planar thrust
     vec2 targetRot = vec2(0.0f);   // desired facing in plane
@@ -82,6 +88,13 @@ public:
         this->addChild(engineEmitter);
 		Services::updateSystem->addNode(engineEmitter);
 
+
+        for (const auto child : children) {
+
+            if (auto casted = std::dynamic_pointer_cast<Model3D>(child)) {
+                body = casted;
+            }
+        }
 	}
 
 
@@ -93,6 +106,42 @@ public:
             vec2 thrust = applyThrust(thrustDir, dt);
             float torque = applyRotationThrust(targetRot, thrustDir, dt);
 			emitParticleEffect(glm::length(thrust));
+
+            float delta = dt;
+            
+            auto vel = vec2(physics->velocity.x, physics->velocity.z);
+            auto speed = glm::length(vel);
+
+            rollSpeed -= glm::sin(roll) * centering * delta;
+            rollSpeed -= glm::cos(0.8 * roll) * physics->angularVelocity.y * spinFactor * (max(0.0f, speed - 8.0f )/ 20.0f) * delta;
+
+            rollSpeed -= glm::cos(0.8 * roll) * torque * delta;
+
+
+            rollSpeed *= (1.0 - damping * delta);
+
+            roll = roll + rollSpeed * delta;
+
+            roll = glm::clamp(roll, -glm::half_pi<float>() * 1.1f, glm::half_pi<float>() * 1.1f);
+            
+
+
+            auto bodyPtr = body.lock();
+            if (bodyPtr) {
+                bodyPtr->rotation = glm::angleAxis(roll, vec3(0,0,-1));
+            }
+
+
+            //aero
+
+
+            auto f = right();            
+            auto rightDir = normalize(vec2(f.x, f.z));
+            float perpendicular = dot(vel, rightDir);
+            
+
+            applyForce(-f * speed * perpendicular * fabs(sin(roll)) * 0.2f, dt);
+            
         }
 
         // Update physics + all components
