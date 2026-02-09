@@ -14,16 +14,16 @@ public:
 	vec3 ambientColor = vec3(0.04f); // default ambient light
 
     // Add a light (weak_ptr)
-    void addLight(const std::shared_ptr<Light2D>& light) {
+    void addLight(const std::shared_ptr<Light3D>& light) {
         if (!light) return;
         lights.push_back(light);
     }
 
     // Remove a light explicitly
-    void removeLight(const std::shared_ptr<Light2D>& light) {
+    void removeLight(const std::shared_ptr<Light3D>& light) {
         lights.erase(
             std::remove_if(lights.begin(), lights.end(),
-                [&light](const std::weak_ptr<Light2D>& w) {
+                [&light](const std::weak_ptr<Light3D>& w) {
                     auto sp = w.lock();
                     return !sp || sp == light;
                 }),
@@ -32,8 +32,8 @@ public:
     }
 
     // Get all valid lights as shared_ptrs
-    std::vector<std::shared_ptr<Light2D>> getActiveLights() {
-        std::vector<std::shared_ptr<Light2D>> result;
+    std::vector<std::shared_ptr<Light3D>> getActiveLights() {
+        std::vector<std::shared_ptr<Light3D>> result;
         for (auto it = lights.begin(); it != lights.end();) {
             if (auto sp = it->lock()) {
                 result.push_back(sp);
@@ -48,5 +48,5 @@ public:
     }
 
 private:
-    std::vector<std::weak_ptr<Light2D>> lights;
+    std::vector<std::weak_ptr<Light3D>> lights;
 };

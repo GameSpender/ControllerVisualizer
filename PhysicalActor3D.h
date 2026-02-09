@@ -8,6 +8,7 @@ public:
     std::shared_ptr<PhysicsComponent3D> physics;
 
     PhysicalActor3D() {
+		name = "PhysicalActor3D";
         physics = addComponent<PhysicsComponent3D>();
     }
 
@@ -38,6 +39,7 @@ public:
     // ---------------- Actor update ----------------
     void update(double dt) override {
         Actor3D::update(dt);   // update all components (including physics)
+        markDirty();
     }
 
     // ---------------- Convenience getters ----------------

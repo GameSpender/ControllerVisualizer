@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -42,13 +42,13 @@ public:
         int numPointLights = 0;
 
         for (int i = 0; i < activeLights.size(); ++i) {
-            auto pl = std::dynamic_pointer_cast<PointLight2D>(activeLights[i]);
+            auto pl = std::dynamic_pointer_cast<PointLight3D>(activeLights[i]);
             if (!pl) continue; // Skip if not a PointLight
             if (numPointLights >= 50) continue;
 
             std::string prefix = "uPointLights[" + std::to_string(i) + "].";
 
-            glUniform3fv(glGetUniformLocation(shader, (prefix + "position").c_str()), 1, glm::value_ptr(pl->position));
+            glUniform3fv(glGetUniformLocation(shader, (prefix + "position").c_str()), 1, glm::value_ptr(pl->getWorldPosition()));
             glUniform3fv(glGetUniformLocation(shader, (prefix + "color").c_str()), 1, glm::value_ptr(pl->color));
             glUniform1f(glGetUniformLocation(shader, (prefix + "intensity").c_str()), pl->intensity);
             glUniform1f(glGetUniformLocation(shader, (prefix + "range").c_str()), pl->range);

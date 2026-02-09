@@ -30,7 +30,7 @@ public:
 // --- Physics data / integrator ---
 class PhysicsComponent3D : public BaseComponent3D, public PhysicsReceiver3D {
 public:
-    float mass = 50.0f;
+    float mass = 1.0f;
     float friction = 0.2f;           // linear damping
     float angularFriction = 0.05f;    // rotational damping
 
@@ -86,3 +86,16 @@ public:
         angularVelocity = glm::vec3(0.0f);
     }
 };
+
+namespace Physics {
+    glm::vec3 convertVelocityToNewWorld(const glm::vec3& worldVel,
+        const glm::mat4& oldWorld,
+        const glm::mat4& newWorld)
+    {
+
+        glm::vec3 localVel = glm::inverse(oldWorld) * glm::vec4(worldVel, 0.0f); // 0 = vector
+        auto vel =  glm::vec3(newWorld * glm::vec4(localVel, 0.0f));
+		vel.z = -vel.z; // Invert Z to convert between left-handed and right-handed
+        return vel;
+    }
+}

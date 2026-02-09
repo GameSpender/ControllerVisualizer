@@ -1,18 +1,18 @@
 #pragma once
 #include "glm/glm.hpp"
-#include "Transform2D.h"
+#include "Transform3D.h"
 
 using namespace glm;
 
 struct MoveEvent {
-    vec2 position;
-    vec2 direction;
+    vec3 position;
+    vec3 direction;
     float speed;
 };
 
 struct ShootEvent {
-    vec2 position;             // world position of muzzle
-    vec2 direction;            // normalized firing direction
+    vec3 position;             // world position of muzzle
+    vec3 direction;            // normalized firing direction
     std::string projectileType; // e.g. "Laser", "Missile"
     std::string soundName;      // which sound to play
     std::string effectName;     // muzzle flash effect

@@ -9,9 +9,10 @@
 class Actor3D : public Transform3D {
 public:
     std::vector<std::shared_ptr<BaseComponent3D>> components;
-	bool expired = false; // for cleanup
 
-    Actor3D() = default;
+    Actor3D() {
+        name = "Actor3D";
+    }
     virtual ~Actor3D() = default;
 
     // ---------------- Component System ----------------
@@ -49,7 +50,7 @@ public:
     }
 
     // ---------------- Update ----------------
-    void update(double dt) {
+    void update(double dt) override{
         std::sort(components.begin(), components.end(),
             [](const std::shared_ptr<BaseComponent3D>& a,
                 const std::shared_ptr<BaseComponent3D>& b) {
@@ -66,10 +67,10 @@ public:
     // Local-space axes
     vec3 forward() const { return normalize(rotation * vec3(0, 0, -1)); }
     vec3 up()      const { return normalize(rotation * vec3(0, 1, 0)); }
-    vec3 left()   const { return normalize(rotation * vec3(1, 0, 0)); }
+    vec3 right()   const { return normalize(rotation * vec3(1, 0, 0)); }
 
     // World-space axes
     vec3 forwardWorld() { return normalize(getWorldRotation() * vec3(0, 0, -1)); }
     vec3 upWorld()      { return normalize(getWorldRotation() * vec3(0, 1, 0)); }
-    vec3 leftWorld()   { return normalize(getWorldRotation() * vec3(1, 0, 0)); }
+    vec3 rightWorld()   { return normalize(getWorldRotation() * vec3(1, 0, 0)); }
 };

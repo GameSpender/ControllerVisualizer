@@ -98,6 +98,7 @@ float attenuate_no_cusp(float distance, float range, float intensity, float fall
 vec3 calculatePointLight(vec3 albedo, float metallic, float roughness, vec3 N, vec3 V, PointLight light, vec3 fragPos)
 {
     float distance = length(light.position - fragPos);
+    if (distance > light.range) return vec3(0);
     
     vec3 L = normalize(light.position - fragPos);
 

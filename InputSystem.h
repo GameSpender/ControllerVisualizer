@@ -111,6 +111,8 @@ struct InputBinding {
 
 class PlayerInput {
 public:
+
+	bool enabled = true;
     std::vector<InputDevice> devices;  // devices assigned to this player
 
     // bindings: each action can have multiple bindings
@@ -122,6 +124,7 @@ public:
     std::unordered_map<Action, float> analogState;       // analog value for axes
 
     void update(const RawInputData& raw) {
+        if (!enabled) return;
         prevActionState = actionState;
 
         for (auto& [action, bindingList] : bindings) {
@@ -192,7 +195,8 @@ public:
         pollRawInput(); // fill raw with current input state
 
         for (PlayerInput& player : players)
-            player.update(raw);
+			if (player.enabled)
+                player.update(raw);
     }
 
 private:
@@ -207,6 +211,7 @@ private:
 
         // mouse position
         glfwGetCursorPos(glfwGetCurrentContext(), &raw.mouseX, &raw.mouseY);
+
 
         // gamepads
         for (int i = 0; i < 4; ++i) {

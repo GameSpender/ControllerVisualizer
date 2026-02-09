@@ -1,11 +1,10 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <memory>
-#include "Transform2D.h"
+#include "Transform3D.h"
 
-class Light2D : public Transform2D {
+class Light3D : public Transform3D {
 public:
-	glm::vec3 position; // offset from parent transform
     glm::vec3 color;
 
     // realistic falloff for 1 unit = 1 meter scale
@@ -14,16 +13,9 @@ public:
     float falloff = 1.0f;
 
 
-    vec3 getWorldPosition() const {
-        if (auto p = parent.lock()) {
-            return vec3(p->getWorldPosition(), 0) + position;
-        }
-        return position;
-	}
-
-	Light2D() : Transform2D() {}
-    virtual ~Light2D() = default; // must be polymorphic for dynamic_cast
+	Light3D() : Transform3D() {}
+    virtual ~Light3D() = default; // must be polymorphic for dynamic_cast
 };
 
-class PointLight2D : public Light2D {
+class PointLight3D : public Light3D {
 };

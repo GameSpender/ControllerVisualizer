@@ -1,4 +1,5 @@
 #version 330 core
+in vec3 vWorldPos;
 in vec2 vUV;
 out vec4 FragColor;
 
@@ -17,25 +18,40 @@ struct PointLight {
 };
 
 uniform PointLight uPointLights[50];
-uniform vec3 uCameraPos;
+
+
+float sqr(float x) {
+    return x * x;
+}
+
+float attenuate(float distance, float range, float intensity, float falloff){
+    float s = distance / range;
+    if (s >= 1.0)
+        return 0.0;
+    float s2 = sqr(s);
+
+    return intensity * sqr(1 - s2) / (1 + falloff * s2);
+}
 
 void main() {
     vec4 texColor = texture(uTexture, vUV);
     vec3 color = texColor.rgb;
 
-    // Ambient
-    vec3 result = color * uAmbientColor;
+    // Ambient + emissive
+    vec3 result = color * uAmbientColor + uEmissive;
 
-    // Simple point light diffuse
-    for(int i=0; i<uNumPointLights; ++i) {
-        vec3 lightDir = normalize(uPointLights[i].position - vec3(0.0)); // assume at origin for quad
-        float diff = max(dot(vec3(0,0,1), lightDir), 0.0);
-        float attenuation = uPointLights[i].intensity / (1.0 + uPointLights[i].falloff * length(uPointLights[i].position));
-        result += color * uPointLights[i].color * diff * attenuation;
+    // Point lights (distance-only attenuation)
+    for(int i = 0; i < uNumPointLights; ++i) {
+        vec3 lightPos = uPointLights[i].position;
+        vec3 lightColor = uPointLights[i].color;
+
+        float distance = length(lightPos - vWorldPos);
+        float attenuation = attenuate(distance, uPointLights[i].range, uPointLights[i].intensity, uPointLights[i].falloff);
+
+        // Add contribution without diffuse angle
+        result += color * lightColor * attenuation * 0.2;
     }
 
-    // Add emissive
-    result += uEmissive;
-
     FragColor = vec4(result, texColor.a);
+
 }

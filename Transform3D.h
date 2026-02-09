@@ -5,19 +5,24 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>  // translate, rotate, scale
 #include <glm/gtx/quaternion.hpp>        // for quaternion rotations
+#include <glm/gtx/matrix_decompose.hpp> // for decompose
 
 using namespace glm;
 
 class Transform3D : public std::enable_shared_from_this<Transform3D> {
 public:
+    std::string name = "Transform3D";
     // Local transform
     vec3 position = vec3(0.0f);
-    quat rotation = quat();         // Identity quaternion
+    quat rotation = glm::angleAxis(0.0f, vec3(0, 1, 0)); // no rotation needed
     vec3 scale = vec3(1.0f);
+
+	bool deleted = false; // for cleanup
 
     // Hierarchy
     std::weak_ptr<Transform3D> parent;
     std::vector<std::shared_ptr<Transform3D>> children;
+
 
 private:
     bool dirty = true;
@@ -42,17 +47,53 @@ public:
         markDirty();
     }
 
+    inline void reparentKeepWorld(const std::shared_ptr<Transform3D>& child,
+        const std::shared_ptr<Transform3D>& newParent)
+    {
+        if (!child) return;
+
+        // Current world transform
+        glm::mat4 world = child->getWorldMatrix();
+
+        // Set new parent first (temporarily resets dirty hierarchy)
+        child->setParent(newParent);
+
+        // Compute new local transform relative to new parent
+        glm::mat4 parentWorldInv(1.0f);
+        if (newParent) parentWorldInv = glm::inverse(newParent->getWorldMatrix());
+
+        glm::mat4 local = parentWorldInv * world;
+
+        // Decompose local matrix into position, rotation, scale
+        glm::vec3 skew;
+        glm::vec4 perspective;
+        glm::decompose(local, child->scale, child->rotation, child->position, skew, perspective);
+
+        child->markDirty();
+    }
+
+
     void addChild(std::shared_ptr<Transform3D> child) {
-        if (std::find(children.begin(), children.end(), child) != children.end()) return;
-        children.push_back(child);
+        if (!child) return;
         child->setParent(shared_from_this());
     }
+
 
     void removeChild(const std::shared_ptr<Transform3D>& child) {
         auto it = std::find(children.begin(), children.end(), child);
         if (it != children.end()) {
             (*it)->parent.reset();
             children.erase(it);
+        }
+    }
+
+
+    void markDeleted() {
+        deleted = true;
+        // Propagate deleted status to all children
+        for (auto& child : children) {
+            if (child && !child->deleted)
+                child->markDeleted();
         }
     }
 

@@ -1,6 +1,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#define GLM_ENABLE_EXPERIMENTAL
+
 #include "glm/glm.hpp"
 #include "glm/ext.hpp"
 
@@ -25,12 +27,15 @@
 #include "CollisionSystem3D.h"
 #include "LightManager.h"
 #include "RenderSystem.h"
+#include "UpdateSystem.h"
 
 #include "BindingGenerator.h"
 #include "Ship3D.h"
+#include "ParticleEmitter.h"
 #include "PlayerController.h"
-
-using namespace glm;
+#include "UprightActor3D.h"
+#include "Guns3D.h"
+#include "Weapon3D.h"
 
 
 
@@ -77,18 +82,32 @@ int main()
     unsigned int shader3D = createShader("shaders/3dColor.vert", "shaders/3dColor.frag");
     unsigned int spriteShader = createShader("shaders/sprite.vert", "shaders/sprite.frag");
 
+    vec2 mapSize(480, 270);
 
-    glm::vec3 cameraPos(50, 50, -50);
-    glm::vec3 target(50, 0, 50);
-    glm::vec3 up(0, 1, 0);
+    glm::vec3 cameraPos(mapSize.x/2, 280, mapSize.y/2+1);
+    //glm::vec3 cameraPos(mapSize.x/2-20, 20, mapSize.y/2-20);
+    glm::vec3 target(mapSize.x / 2, 0, mapSize.y / 2);
+    glm::vec3 up(0, 0, -1);
+    //glm::vec3 up(0, 1, 0);
     glm::mat4 view = glm::lookAt(cameraPos, target, up);
 
-    glm::mat4 projection = glm::perspective(
-        glm::radians(60.0f),
+    glm::mat4 mainProjection = glm::perspective(
+        //glm::radians(80.0f),
+        glm::radians(55.0f),
         (float)screenWidth / (float)screenHeight,
         0.1f,
         5000.0f
     );
+
+    glm::mat4 cameraProjection = glm::perspective(
+        //glm::radians(80.0f),
+        glm::radians(70.0f),
+        (float)screenWidth / (float)screenHeight,
+        0.1f,
+        5000.0f
+    );
+
+    glm::mat4 projection = mainProjection;
 
     //SpriteRenderer spriteRenderer(rectShader);
     ModelRenderer modelRenderer(shader3D);
@@ -96,12 +115,10 @@ int main()
     SpriteRenderer spriteRenderer(spriteShader);
 
 
-    glClearColor(0.15f, 0.15f, 0.15f, 1.0f); // Postavljanje boje pozadine
-
-
     // ----------------- new stuff -------------------
 
     PlayerInput playerInput;
+    PlayerInput cameraInput;
 
 
     InputDevice keyboard;
@@ -119,18 +136,28 @@ int main()
         new SoundManager,
         new EventHandler,
         nullptr, // projectile system
-		nullptr, // 2D collision system 
+        nullptr, // 2D collision system 
         new CollisionSystem3D,
         new LightManager,
-        new RenderSystem(&modelRenderer, &spriteRenderer)
+        new RenderSystem(&modelRenderer, &spriteRenderer),
+        new UpdateSystem
     );
 
 
     // ----------------- new stuff -------------------
 
 
+
+    
+    Services::assets->loadModel("coordinate", "res/models/coordinate.glb");
     Services::assets->loadModel("plane", "res/models/plane/plane.gltf");
-	Services::assets->loadTexture("testSprite", "res/fourlegs.png");
+    Services::assets->loadModel("drone", "res/models/drone/Drone.gltf");
+    Services::assets->loadModel("map", "res/models/map/controller_visualiser_map.gltf");
+
+	Services::assets->loadTexture("smoke", "res/sprites/smoke.png");
+    Services::assets->loadTexture("laser_shot", "res/sprites/projectile.png");
+
+    Services::sound->loadSound("laser_shot", "res/audio/shoot.wav");
 
 
     keyboard = {
@@ -148,42 +175,70 @@ int main()
 
 
 
-    //bindKeyboardAndMouse(keyboard, mouse, playerInput, screenHeight);
-
+	bindGamepad(gamepad, cameraInput);
     bindGamepad(gamepad, playerInput);
 
-    //bindGamepad(gamepad2, player2Input);
 
-
+	
 
     Services::inputSystem->devices.push_back(keyboard);
     Services::inputSystem->devices.push_back(mouse);
     Services::inputSystem->devices.push_back(gamepad);
     Services::inputSystem->players.push_back(playerInput);
+	Services::inputSystem->players.push_back(cameraInput);
 
 	std::shared_ptr<Transform3D> worldOrigin = std::make_shared<Transform3D>();
 
+	Services::updateSystem->addNode(worldOrigin);
+
+
+	std::shared_ptr<UprightActor3D> camera = std::make_shared<UprightActor3D>();
+	camera->position = cameraPos;
+	camera->lookAt(target, up);
+	worldOrigin->addChild(camera);
+
+	Services::updateSystem->addNode(camera);
+
+    /*std::shared_ptr<Model3D> coordinateModel = std::make_shared<Model3D>("coordinate");
+    coordinateModel->scale = vec3(5.0f);
+    coordinateModel->position = vec3(mapSize.x / 2, 0, mapSize.y / 2);
+    Services::renderSystem->submit(coordinateModel);*/
+
+
+
     std::shared_ptr<Ship3D> playerShip = std::make_shared<Ship3D>();
-    playerShip->screenMax = vec2(100, 100);
-    playerShip->respawn(vec3(10, 0, 10));
+    playerShip->screenMax = mapSize;
+    playerShip->respawn(vec3(mapSize.x/2, 0, mapSize.y/2));
     playerShip->scale = vec3(1.0f);
 
 	std::shared_ptr<Model3D> shipModel = std::make_shared<Model3D>("plane");
 
+    auto hardpoint = std::make_shared<Hardpoint3D>();
+    hardpoint->position = vec3(0, 0, -7);
+    playerShip->addHardpoint(hardpoint, 0);
+
+    auto laserGun = std::make_shared<LaserGun>();
+    laserGun->scale = vec3(5.0f);
+    laserGun->shotInterval = 0.3f;
+    hardpoint->attachWeapon(laserGun);
+
+
+    
+	Services::updateSystem->addNode(playerShip);
+    Services::updateSystem->addNode(hardpoint);
+    Services::updateSystem->addNode(laserGun);
 	Services::renderSystem->submit(shipModel);
 
     playerShip->addChild(shipModel);
 
     worldOrigin->addChild(playerShip);
 
-	std::shared_ptr<Sprite3D> testSprite = std::make_shared<Sprite3D>("testSprite", Sprite3D::Mode::Billboard);
-	testSprite->position = vec3(10, 0, 0);
-	testSprite->scale = vec3(100.0f);
+    playerShip->initialize();
 
-	playerShip->addChild(testSprite);
 
-	Services::renderSystem->submit(testSprite);
-
+    /*auto cord = std::make_shared<Model3D>("coordinate");
+    laserGun->addChild(cord);
+	Services::renderSystem->submit(cord);*/
 
 
     std::shared_ptr<Collider3D> shipCollider = std::make_shared<Collider3D>(Collider3D::ShapeType3D::Cylinder);
@@ -200,32 +255,113 @@ int main()
         std::cout << "Ship 1 stopped being collided with!\n";
         };
 
+    Services::eventBus->subscribe<ShootEvent>([](const ShootEvent& e) {
+        // This code runs every time a ShootEvent is emitted
+        std::cout << "Shoot event received!\n";
+        std::cout << "Position: " << e.position.x << ", " << e.position.y << ", " << e.position.z << "\n";
+        std::cout << "Direction: " << e.direction.x << ", " << e.direction.y << ", " << e.direction.z << "\n";
+        std::cout << "Projectile Type: " << e.projectileType << "\n";
+        std::cout << "Sound: " << e.soundName << ", Effect: " << e.effectName << "\n";
 
+        // Example: spawn projectile
+        // spawnProjectile(e.position, e.direction, e.projectileType);
 
+        // Example: play sound
+        // playSound(e.soundName);
 
-
+        // Example: play muzzle flash effect
+        // spawnEffect(e.effectName, e.position, e.direction);
+    });
+ 
     PlayerController playerController(&Services::inputSystem->players[0]);
 
     //playerController.possess(playerShip.get());
     playerController.possess(playerShip.get());
 
 
-    Services::lights->ambientColor = glm::vec3(0.5f); // slightly brighter ambient light for 3D models
+	glm::vec3 ambientLight(0.05f); // default ambient light for 3D models
+    Services::lights->ambientColor = ambientLight; // slightly brighter ambient light for 3D models
+    glClearColor(ambientLight.x, ambientLight.y, ambientLight.z, 1.0f); // Postavljanje boje pozadine
 
-    PointLight2D pointLight;
-    pointLight.position = vec3(screenWidth / 2, screenHeight / 2, 100);
-    pointLight.color = vec3(1.0f, 0.8f, 0.6f);
-    pointLight.intensity = 6.0f;
-    pointLight.range = 2000.0f;
-    auto light = std::make_shared<PointLight2D>(pointLight);
+    PointLight3D pointLight;
+    pointLight.position = vec3(50, 150, 40);
+    pointLight.color = vec3(0.7f, 0.8f, 1.0f);
+    pointLight.intensity = 0.4f;
+    pointLight.range = 100.0f;
+    auto light = std::make_shared<PointLight3D>(pointLight);
     Services::lights->addLight(light);
 
+   
+
+
+
+    PointLight3D pl;
+    pl.color = vec3(0.9f, 0.5f, 0);
+    pl.intensity = 3.0f;
+    pl.range = 300.0f;
+
+    pl.position = vec3(mapSize.x / 2, 40, 5.0f);
+	auto plPtr1 = std::make_shared<PointLight3D>(pl);
+    pl.position = vec3(mapSize.x / 2, 40, mapSize.y - 5.0f);
+    auto plPtr2 = std::make_shared<PointLight3D>(pl);
+	pl.position = vec3(5.0f, 40, mapSize.y / 2);
+	auto plPtr3 = std::make_shared<PointLight3D>(pl);
+    pl.position = vec3(mapSize.x - 5.0f, 40, mapSize.y / 2);
+    auto plPtr4 = std::make_shared<PointLight3D>(pl);
+    Services::lights->addLight(plPtr1);
+    Services::lights->addLight(plPtr2);
+    Services::lights->addLight(plPtr3);
+	Services::lights->addLight(plPtr4);
+
+
+
+
+	auto map = std::make_shared<Model3D>("map");
+
+	map->position = vec3(mapSize.x / 2, 10.0f, mapSize.y / 2);
+	map->rotation = quat(vec3(-glm::half_pi<float>(), 0, 0));
+	//map->lookAt(map->position + vec3(0, -1, 0), vec3(0, 0, -1));
+	map->scale = vec3(10.3f);
+    worldOrigin->addChild(map);
+
+	Services::renderSystem->submit(map);
+	Services::updateSystem->addNode(map);
+
+    for (int i = 0; i < 4; ++i) {
+        PointLight3D pl;
+
+        float offset = 22.75f * i;
+        pl.position = vec3(-23.0f, -10.0f, -23.7f - offset);
+        pl.color = vec3(1.0, 0.2f, 0.2f);
+        pl.intensity = 3.0f;
+        pl.range = 100.0f;
+
+        PointLight3D pr;
+        pr.position = vec3(23.0f, -10.0f, -23.7f - offset);
+        pr.color = vec3(1.0, 0.2f, 0.2f);
+        pr.intensity = 3.0f;
+        pr.range = 100.0f;
+
+		auto plPtr = std::make_shared<PointLight3D>(pl);
+		auto prPtr = std::make_shared<PointLight3D>(pr);
+
+        Services::lights->addLight(plPtr);
+        Services::lights->addLight(prPtr);
+
+		map->addChild(plPtr);
+		map->addChild(prPtr);
+
+        pl.markDirty();
+        pr.markDirty();
+    }
 
 
 
     int framerateCap = 75;
     double frameInterval = 1.0f / framerateCap;
     double nextFrameTime = 0.0f;
+	double nextDebugTime = 0.0f;
+	double debugInterval = 1.0f;
 
     double lastTime = 0.0f;
 
@@ -243,6 +379,8 @@ int main()
             });
     }
 
+	bool cameraPressed = false;
+	bool cameraPossessed = false;
 
     while (!glfwWindowShouldClose(window))
     {
@@ -256,9 +394,8 @@ int main()
         playerController.update(dt);
 
 
-        playerShip->update(dt);
+		Services::updateSystem->update(dt);
 
-        //Services::projectiles->update(dt);
 
         if(Services::collisions3D)
 			Services::collisions3D->update();
@@ -269,6 +406,30 @@ int main()
 
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             glfwSetWindowShouldClose(window, true);
+
+        if (glfwGetKey(window, GLFW_KEY_F1) == GLFW_PRESS) {
+            if (!cameraPressed) {
+				
+                playerController.unpossess();
+                if (!cameraPossessed) {
+                    projection = cameraProjection;
+                    playerController.possess(camera.get());
+                }
+                else {
+                    projection = mainProjection;
+					playerController.possess(playerShip.get());
+
+                    camera->position = cameraPos;
+                    camera->lookAt(target, up);
+                }
+				cameraPossessed = !cameraPossessed;
+                std::cout << "Switching input mode. Camera control: " << cameraPossessed << std::endl;
+                cameraPressed = true;
+            }
+        }
+        else {
+            cameraPressed = false;
+        }
 
         double currentTime = glfwGetTime();
         if (nextFrameTime <= currentTime) {
@@ -284,7 +445,18 @@ int main()
             glEnable(GL_DEPTH_TEST);
 
 
-			Services::renderSystem->renderAll(view, projection, cameraPos);
+            glm::vec3 eye = camera->getWorldPosition();
+
+            Services::renderSystem->renderAll(
+                glm::lookAt(
+                    eye,
+                    eye + camera->forward(),
+                    camera->upWorld()
+                ),
+                projection,
+                eye
+            );
+
 
 
 
@@ -296,6 +468,17 @@ int main()
             renderTime = currentTime - renderTime;
             nextFrameTime = currentTime + frameInterval - renderTime;
         }
+
+        if(nextDebugTime <= currentTime) {
+            // Output debug info to console every second
+            //printf("Player Pos: (%.2f, %.2f, %.2f) Vel: (%.2f, %.2f, %.2f)\n",
+            //    playerShip->position.x, playerShip->position.y, playerShip->position.z,
+            //    playerShip->physics.velocity.x, playerShip->physics.velocity.y, playerShip->physics.velocity.z);
+
+			//printf("World origin children count: %d\n", worldOrigin->children.size());
+			//std::cout << glm::to_string(Services::inputSystem->players[0].getPosition(Action::MousePositionHorizontal, Action::MousePositionVertical)) << std::endl;
+            nextDebugTime = currentTime + debugInterval;
+		}
 
         glfwPollEvents();
     }

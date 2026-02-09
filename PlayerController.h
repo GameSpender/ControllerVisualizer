@@ -28,7 +28,7 @@ public:
     }
 
     void update(double dt) {
-        if (!pawn || !input) return;
+        if (!pawn || !input || !input->enabled) return;
 
         // Movement
         pawn->setMoveDirection(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));

@@ -6,10 +6,12 @@
 #include "LockToPlaneComponent.h"
 #include "Services.h"
 #include "EventBus.h"
+#include "UpdateSystem.h"
 #include <string>
 #include <unordered_map>
 #include <vector>
 #include "Weapon3D.h"
+#include "ParticleEmitter.h"
 #include "glm/gtx/vector_angle.hpp"
 
 
@@ -18,13 +20,16 @@ using namespace glm;
 class Ship3D : public PhysicalActor3D, public IControllable {
     std::shared_ptr<HealthComponent> health;
     std::shared_ptr<LockToPlaneComponent> planeLock;
+	
 
 public:
+
+    std::weak_ptr<ParticleEmitter3D> engineEmitter;
     // Ship parameters
-    float baseThrust = 300.0f;
+    float baseThrust = 800.0f;
     float bonusThrustMultiplier = 1.2f;
     float bonusBrakingMultiplier = 2.0f;
-    float rotationThrust = 100.0f;
+    float rotationThrust = 170.0f;
 
     float roll = 0.0f;
 
@@ -63,6 +68,23 @@ public:
         }
     }
 
+    void initialize() {
+
+        auto engineEmitter = std::make_shared<ParticleEmitter3D>();
+        this->engineEmitter = engineEmitter;
+        engineEmitter->particleTemplate = std::make_shared<Sprite3D>("smoke", Sprite3D::Mode::Billboard);
+		engineEmitter->particleTemplate->scale = vec3(4.0f);
+        engineEmitter->particleParent = this->parent;
+		engineEmitter->inheritParentVelocity = true;
+        engineEmitter->particleLifetime = 0.1f;
+		engineEmitter->position = vec3(0, 0, 7.5f);
+		engineEmitter->rotation = quat(vec3(0, glm::pi<float>(), 0));
+        this->addChild(engineEmitter);
+		Services::updateSystem->addNode(engineEmitter);
+
+	}
+
+
     // ---------------- Main Update ----------------
     void update(double dt) override {
         for (auto& hp : hardpoints) hp->update(dt);
@@ -70,6 +92,7 @@ public:
         if (!isDead()) {
             vec2 thrust = applyThrust(thrustDir, dt);
             float torque = applyRotationThrust(targetRot, thrustDir, dt);
+			emitParticleEffect(glm::length(thrust));
         }
 
         // Update physics + all components
@@ -168,8 +191,8 @@ private:
     }
 
     // ---------------- Corrected thrust ----------------
-    vec2 applyThrust(const vec2& direction, double dt) {
-        if (length(direction) < 0.01f) return vec2(0.0f);
+    vec3 applyThrust(const vec2& direction, double dt) {
+        if (length(direction) < 0.01f) return vec3(0.0f);
 
         vec2 thrustDirNorm = normalize(direction);
         vec2 forwardDir = planarForward();
@@ -195,7 +218,7 @@ private:
 
         applyForce(finalThrust, dt);
 
-        return thrustDirNorm; // just for reference
+        return finalThrust; // just for reference
     }
 
 
@@ -213,4 +236,14 @@ private:
         physics->angularVelocity.y = angVelY;
     }
 
+    void emitParticleEffect(float thrust) {
+        if (auto emitter = engineEmitter.lock()) {
+            if(thrust/baseThrust < 0.1) {
+                emitter->emitRate = 0.0f;
+                return;
+			}
+			emitter->initialSpeed = (0.3 * baseThrust) * (thrust / baseThrust);
+			emitter->emitRate = 70.0f * (thrust / baseThrust);
+        }
+	}
 };
