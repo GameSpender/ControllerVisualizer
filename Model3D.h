@@ -39,4 +39,32 @@ public:
         Transform3D::update(dt);
         // advance animations if needed
     }
+
+    void applyTransform(const glm::mat4& transform, const std::string& meshName) {
+        auto mdl = getModel().lock();
+        if (!mdl) return;
+
+        for (auto& mesh : mdl->meshes) {
+            if (!mesh) continue;
+
+            // If mesh name matches
+            if (mesh->name == meshName) {
+                // Apply the transform offset
+                mesh->offset = transform;
+            }
+        }
+    }
+
+    std::weak_ptr<Mesh> findMesh(const std::string& meshName) {
+        auto mdl = getModel().lock();
+        if (!mdl) return std::weak_ptr<Mesh>();
+
+        for (auto& mesh : mdl->meshes) {
+            if (!mesh) continue;
+            
+            return mesh;
+        }
+        return std::weak_ptr<Mesh>();
+    }
+
 };

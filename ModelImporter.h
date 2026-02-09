@@ -39,7 +39,9 @@ public:
     GLsizei indexCount = 0;
     Material material;
     glm::mat4 transform = glm::mat4(1.0f);
+    glm::mat4 offset = glm::mat4(1.0f);
 
+    std::string name;
     ~Mesh();
 };
 

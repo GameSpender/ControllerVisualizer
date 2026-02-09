@@ -56,13 +56,13 @@ public:
 
             auto sprite = std::make_shared<Sprite3D>("laser_shot", Sprite3D::Mode::Billboard);
             sprite->setEmissiveColor(vec3(0.4f, 1.0f, 0.3f));
-
+            sprite->rotation = glm::vec3(0, 0, glm::half_pi<float>());
             projectile->addChild(sprite);
 
 
             auto light = std::make_shared<PointLight3D>();
             light->color = vec3(0, 1, 0);
-            light->intensity = 1.0f;
+            light->intensity = 4.0f;
             light->range = 50.0f;
             projectile->addChild(light);
             

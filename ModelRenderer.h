@@ -66,7 +66,7 @@ public:
         for (const auto& mesh : model->meshes)
         {
 
-            glm::mat4 modelMatrix = rootTransform * mesh->transform;
+            glm::mat4 modelMatrix = rootTransform * mesh->transform * mesh->offset;
             glm::mat4 mvp = proj * view * modelMatrix;
 
             glUniformMatrix4fv(glGetUniformLocation(shader, "uMVP"), 1, GL_FALSE, glm::value_ptr(mvp));

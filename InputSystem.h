@@ -15,7 +15,22 @@ enum class Action {
 	TertiaryAbility,
 	QuaternaryAbility,
     Dash,
-
+    LeftStickX,
+    LeftStickY,
+    RightStickX,
+    RightStickY,
+    A,
+    B,
+    X,
+    Y,
+    DpadUp,
+    DpadDown,
+    DpadLeft,
+    DpadRight,
+    LeftShoulder,
+    RightShoulder,
+    LeftTrigger,
+    RightTrigger
 };
 
 enum class DeviceType { Keyboard, Mouse, Gamepad };
@@ -187,16 +202,16 @@ private:
 class InputSystem {
 public:
     std::vector<InputDevice> devices;
-    std::vector<PlayerInput> players;
+    std::vector<std::shared_ptr<PlayerInput>> players;
 
     RawInputData raw; // populated by polling GLFW
 
     void update() {
         pollRawInput(); // fill raw with current input state
 
-        for (PlayerInput& player : players)
-			if (player.enabled)
-                player.update(raw);
+        for (auto player : players)
+			if (player->enabled)
+                player->update(raw);
     }
 
 private:

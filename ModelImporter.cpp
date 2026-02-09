@@ -126,6 +126,8 @@ std::shared_ptr<Mesh> ModelImporter::processMesh(
 {
     auto outMesh = std::make_shared<Mesh>();
 
+    outMesh->name = mesh->mName.C_Str();
+
     std::vector<Vertex> vertices(mesh->mNumVertices);
     std::vector<uint32_t> indices;
 

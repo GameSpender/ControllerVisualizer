@@ -36,6 +36,7 @@
 #include "UprightActor3D.h"
 #include "Guns3D.h"
 #include "Weapon3D.h"
+#include "GamepadObject.h"
 
 
 
@@ -117,8 +118,9 @@ int main()
 
     // ----------------- new stuff -------------------
 
-    PlayerInput playerInput;
-    PlayerInput cameraInput;
+    auto playerInput = std::make_shared<PlayerInput>();
+    auto cameraInput = std::make_shared<PlayerInput>();
+    auto gamepadInput = std::make_shared<PlayerInput>();
 
 
     InputDevice keyboard;
@@ -153,9 +155,10 @@ int main()
     Services::assets->loadModel("plane", "res/models/plane/plane.gltf");
     Services::assets->loadModel("drone", "res/models/drone/Drone.gltf");
     Services::assets->loadModel("map", "res/models/map/controller_visualiser_map.gltf");
+    Services::assets->loadModel("gamepad", "res/models/controller/ctrl.gltf");
 
 	Services::assets->loadTexture("smoke", "res/sprites/smoke.png");
-    Services::assets->loadTexture("laser_shot", "res/sprites/projectile.png");
+    Services::assets->loadTexture("laser_shot", "res/sprites/enemy_projectile.png");
 
     Services::sound->loadSound("laser_shot", "res/audio/shoot.wav");
 
@@ -177,8 +180,7 @@ int main()
 
 	bindGamepad(gamepad, cameraInput);
     bindGamepad(gamepad, playerInput);
-
-
+    bindGamepadFull(gamepad, gamepadInput);
 	
 
     Services::inputSystem->devices.push_back(keyboard);
@@ -186,6 +188,7 @@ int main()
     Services::inputSystem->devices.push_back(gamepad);
     Services::inputSystem->players.push_back(playerInput);
 	Services::inputSystem->players.push_back(cameraInput);
+    Services::inputSystem->players.push_back(gamepadInput);
 
 	std::shared_ptr<Transform3D> worldOrigin = std::make_shared<Transform3D>();
 
@@ -205,16 +208,23 @@ int main()
     Services::renderSystem->submit(coordinateModel);*/
 
 
+    auto gamepadObject = std::make_shared<GamepadObject>(gamepadInput);
+    gamepadObject->init();
+    gamepadObject->rotation = glm::quat(vec3(-glm::half_pi<float>(), 0, 0));
+    gamepadObject->position = vec3(mapSize.x / 2, -40, mapSize.y / 2 - 30);
+    gamepadObject->scale = vec3(30.0f);
+    
+    Services::updateSystem->addNode(gamepadObject);
 
     std::shared_ptr<Ship3D> playerShip = std::make_shared<Ship3D>();
     playerShip->screenMax = mapSize;
     playerShip->respawn(vec3(mapSize.x/2, 0, mapSize.y/2));
-    playerShip->scale = vec3(1.0f);
+    playerShip->scale = vec3(1.3f);
 
 	std::shared_ptr<Model3D> shipModel = std::make_shared<Model3D>("plane");
 
     auto hardpoint = std::make_shared<Hardpoint3D>();
-    hardpoint->position = vec3(0, 0, -7);
+    hardpoint->position = vec3(0, 0, -8);
     playerShip->addHardpoint(hardpoint, 0);
 
     auto laserGun = std::make_shared<LaserGun>();
@@ -273,7 +283,7 @@ int main()
         // spawnEffect(e.effectName, e.position, e.direction);
     });
  
-    PlayerController playerController(&Services::inputSystem->players[0]);
+    PlayerController playerController(playerInput);
 
     //playerController.possess(playerShip.get());
     playerController.possess(playerShip.get());
@@ -284,10 +294,10 @@ int main()
     glClearColor(ambientLight.x, ambientLight.y, ambientLight.z, 1.0f); // Postavljanje boje pozadine
 
     PointLight3D pointLight;
-    pointLight.position = vec3(50, 150, 40);
+    pointLight.position = vec3(mapSize.x/2, 100, mapSize.y/2 - 50);
     pointLight.color = vec3(0.7f, 0.8f, 1.0f);
-    pointLight.intensity = 0.4f;
-    pointLight.range = 100.0f;
+    pointLight.intensity = 10.0f;
+    pointLight.range = 150.0f;
     auto light = std::make_shared<PointLight3D>(pointLight);
     Services::lights->addLight(light);
 

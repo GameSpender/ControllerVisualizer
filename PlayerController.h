@@ -10,10 +10,10 @@ class PlayerController {
     Actor3D* actorPawn = nullptr;
     PhysicalActor3D* physPawn = nullptr;
 
-    PlayerInput* input = nullptr;
+    std::weak_ptr<PlayerInput> playerInput;
 
 public:
-    PlayerController(PlayerInput* pi) : input(pi) {}
+    PlayerController(std::shared_ptr<PlayerInput> pi) : playerInput(pi) {}
 
     void possess(IControllable* target) {
         pawn = target;
@@ -28,7 +28,10 @@ public:
     }
 
     void update(double dt) {
-        if (!pawn || !input || !input->enabled) return;
+        if (!pawn || playerInput.expired()) return;
+
+        auto input = playerInput.lock();
+        if (!input || !input->enabled) return;
 
         // Movement
         pawn->setMoveDirection(input->getPosition(Action::MoveHorizontal, Action::MoveVertical));
