@@ -14,7 +14,8 @@
 #include "ParticleEmitter.h"
 #include "glm/gtx/vector_angle.hpp"
 #include "Model3D.h"
-
+#include "Light.h"
+#include "LightManager.h"
 
 using namespace glm;
 
@@ -22,6 +23,16 @@ class Ship3D : public PhysicalActor3D, public IControllable {
     std::shared_ptr<HealthComponent> health;
     std::shared_ptr<LockToPlaneComponent> planeLock;
     std::weak_ptr<Model3D> body;
+
+    std::weak_ptr<PointLight3D> rightLight;
+    std::weak_ptr<PointLight3D> leftLight;
+
+    float blink = 0.05f;
+    float short_blink = 0.1f;
+    float long_blink = 2.0f;
+    float blink_intensity = 2.0f;
+    float blink_range = 20;
+    float accumulator = 0;
 
 public:
 
@@ -89,12 +100,32 @@ public:
 		Services::updateSystem->addNode(engineEmitter);
 
 
+
         for (const auto child : children) {
 
             if (auto casted = std::dynamic_pointer_cast<Model3D>(child)) {
                 body = casted;
             }
         }
+
+        auto point = PointLight3D();
+        point.position = vec3(7.5, 0.2, 4.7);
+        point.color = vec3(0, 1, 0);
+        point.range = blink_range;
+        point.intensity = blink_intensity;
+
+        auto pr = std::make_shared<PointLight3D>(point);
+        Services::lights->addLight(pr);
+        body.lock()->addChild(pr);
+        rightLight = pr;
+
+        point.color = vec3(1.5, 0, 0);
+        point.position.x *= -1;
+
+        auto pl = std::make_shared<PointLight3D>(point);
+        Services::lights->addLight(pl);
+        body.lock()->addChild(pl);
+        leftLight = pl;
 	}
 
 
@@ -141,6 +172,25 @@ public:
             
 
             applyForce(-f * speed * perpendicular * fabs(sin(roll)) * 0.2f, dt);
+
+            /*accumulator += dt;
+            if (accumulator < long_blink) {
+                leftLight.lock()->intensity = 0;
+                rightLight.lock()->intensity = 0;
+            }
+            else if (accumulator < long_blink + blink) {
+                leftLight.lock()->intensity = blink_intensity;
+                rightLight.lock()->intensity = blink_intensity;
+            }
+            else if (accumulator < long_blink + blink + short_blink) {
+                leftLight.lock()->intensity = 0;
+                rightLight.lock()->intensity = 0;
+            }
+            else if (accumulator < long_blink + blink + short_blink + blink) {
+                leftLight.lock()->intensity = blink_intensity;
+                rightLight.lock()->intensity = blink_intensity;
+            }
+            else accumulator = 0;*/
             
         }
 
